@@ -89,7 +89,7 @@ describe('parseStringList', () => {
 })
 
 describe('env', () => {
-  test('defaults DISCORD_BOT_START to true when unset', async () => {
+  test('defaults DISCORD_BOT_START to false when unset', async () => {
     const restoreEnv = withApiEnv({
       DISCORD_BOT_START: undefined,
     })
@@ -97,7 +97,7 @@ describe('env', () => {
     try {
       const { env } = await import(`../src/api.ts?test=${Date.now()}-default`)
 
-      expect(env.DISCORD_BOT_START).toBe(true)
+      expect(env.DISCORD_BOT_START).toBe(false)
     } finally {
       restoreEnv()
     }

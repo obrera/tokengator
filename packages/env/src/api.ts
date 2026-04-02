@@ -31,7 +31,7 @@ const solanaAdminAddressesSchema = z
   .transform(parseStringList)
   .pipe(z.array(z.string().min(1)))
 
-const envBooleanSchema = createEnvBooleanSchema(true)
+const envBooleanEnabledSchema = createEnvBooleanSchema(true)
 const envBooleanDisabledSchema = createEnvBooleanSchema(false)
 
 const heliusClusterSchema = z.enum(['devnet', 'mainnet'])
@@ -42,13 +42,13 @@ export const env = createEnv({
   runtimeEnv: process.env,
   server: {
     BETTER_AUTH_SECRET: z.string().min(32),
-    BETTER_AUTH_SOLANA_SIGN_IN_ENABLED: envBooleanSchema,
+    BETTER_AUTH_SOLANA_SIGN_IN_ENABLED: envBooleanEnabledSchema,
     BETTER_AUTH_URL: z.url(),
     CORS_ORIGINS: corsOriginsSchema,
     DATABASE_AUTH_TOKEN: z.string().min(1),
     DATABASE_URL: z.string().min(1),
     DISCORD_ADMIN_IDS: discordAdminIdsSchema,
-    DISCORD_BOT_START: envBooleanSchema,
+    DISCORD_BOT_START: envBooleanDisabledSchema,
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     DISCORD_CLIENT_ID: z.string().min(1),
     DISCORD_CLIENT_SECRET: z.string().min(1),

@@ -16,7 +16,7 @@
     }
   },
   "scripts": {
-    "check-types": "tsc -b",
+    "check-types": "tsc -p tsconfig.check.json --noEmit",
     "test": "bun test ./test"
   },
   "dependencies": {
@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@tokengator/config": "workspace:*",
+    "@types/bun": "catalog:",
     "typescript": "^5"
   }
 }

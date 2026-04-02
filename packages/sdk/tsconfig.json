@@ -5,7 +5,8 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "dist",
-    "sourceMap": true
+    "sourceMap": true,
+    "types": ["bun-types"]
   },
   "include": ["src", "test", "test-e2e", "test-integration"]
 }

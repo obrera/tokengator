@@ -74,6 +74,39 @@ bun run dev
 Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
 The API is running at [http://localhost:3000](http://localhost:3000).
 
+## Dokploy / Docker Compose
+
+This repo now includes Bun-based Docker images for:
+
+- `db`: local `libsql-server` storage in Docker
+- `api`: the Hono API and optional Discord bot process
+- `web`: the TanStack Start frontend
+
+Use the root [`docker-compose.yml`](/home/obrera/projects/tokengator/docker-compose.yml) and copy values from [`.env.dokploy.example`](/home/obrera/projects/tokengator/.env.dokploy.example) into Dokploy service env.
+
+Recommended URL alignment:
+
+- `BETTER_AUTH_URL=https://api.example.com`
+- `WEB_URL=https://app.example.com`
+- `VITE_API_URL=https://api.example.com`
+- `CORS_ORIGINS=https://app.example.com`
+
+Database defaults for the bundled `db` service:
+
+- `DATABASE_URL=http://db:8080`
+- `DATABASE_AUTH_TOKEN=no-token`
+
+The Dokploy compose intentionally uses container-internal ports plus `dokploy-network` instead of host port binds, so it will not fight with services already running on the box.
+
+For SSR, the web service can optionally use `INTERNAL_API_URL` (default `http://api:3000`) so server-side requests stay on the compose network while the browser still uses `VITE_API_URL`.
+
+The API waits for the database by default. Schema push on boot is available but disabled by default:
+
+- `WAIT_FOR_DATABASE=true`
+- `DB_PUSH_ON_START=false`
+
+Keep `DISCORD_BOT_START=false` unless you have also provided `DISCORD_BOT_TOKEN` and intentionally want the bot started inside the API container.
+
 ## `dev:local`
 
 For the full local stack, you can also run:

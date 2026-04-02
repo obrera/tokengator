@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@libsql/client": "catalog:",
+    "@libsql/linux-x64-gnu": "catalog:",
     "@tokengator/env": "workspace:*",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@tokengator/config": "workspace:*",
+    "@types/bun": "catalog:",
     "drizzle-kit": "^0.31.8",
     "typescript": "^5"
   }

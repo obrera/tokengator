@@ -1,27 +1,19 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 
 import { MessageFlags, type InteractionReplyOptions } from 'discord.js'
 
 type WhoamiModule = typeof import('../src/commands/whoami')
 
-let previousBetterAuthUrl = ''
-let previousBetterAuthUrlWasSet = false
-let whoamiModule: WhoamiModule
+const previousBetterAuthUrl = process.env.BETTER_AUTH_URL ?? ''
+const previousBetterAuthUrlWasSet = 'BETTER_AUTH_URL' in process.env
+process.env.BETTER_AUTH_URL = 'http://127.0.0.1:3000'
+const whoamiModule: WhoamiModule = await import(`../src/commands/whoami.ts?test=${Date.now()}-whoami`)
 
-beforeAll(async () => {
-  previousBetterAuthUrl = process.env.BETTER_AUTH_URL ?? ''
-  previousBetterAuthUrlWasSet = 'BETTER_AUTH_URL' in process.env
-  process.env.BETTER_AUTH_URL = 'http://127.0.0.1:3000'
-  whoamiModule = await import(`../src/commands/whoami.ts?test=${Date.now()}-whoami`)
-})
-
-afterAll(() => {
-  if (previousBetterAuthUrlWasSet) {
-    process.env.BETTER_AUTH_URL = previousBetterAuthUrl
-  } else {
-    delete process.env.BETTER_AUTH_URL
-  }
-})
+if (previousBetterAuthUrlWasSet) {
+  process.env.BETTER_AUTH_URL = previousBetterAuthUrl
+} else {
+  delete process.env.BETTER_AUTH_URL
+}
 
 function getEmbedJson(reply: InteractionReplyOptions) {
   const [embed] = reply.embeds ?? []

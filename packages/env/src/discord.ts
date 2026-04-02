@@ -8,14 +8,14 @@ dotenv.config({
   quiet: true,
 })
 
-const envBooleanSchema = createEnvBooleanSchema(true)
+const envBooleanDisabledSchema = createEnvBooleanSchema(false)
 
 export const env = createEnv({
   emptyStringAsUndefined: true,
   runtimeEnv: process.env,
   server: {
     BETTER_AUTH_URL: z.url(),
-    DISCORD_BOT_START: envBooleanSchema,
+    DISCORD_BOT_START: envBooleanDisabledSchema,
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     DISCORD_CLIENT_ID: z.string().min(1).optional(),
     DISCORD_GUILD_ID: z.string().min(1).optional(),

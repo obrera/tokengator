@@ -1,0 +1,71 @@
+services:
+  db:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    environment:
+      SQLD_NODE: primary
+    expose:
+      - '8080'
+    volumes:
+      - db-data:/var/lib/sqld
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    depends_on:
+      - db
+    environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      BETTER_AUTH_SOLANA_SIGN_IN_ENABLED: ${BETTER_AUTH_SOLANA_SIGN_IN_ENABLED:-true}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      DATABASE_AUTH_TOKEN: ${DATABASE_AUTH_TOKEN:-no-token}
+      DATABASE_URL: ${DATABASE_URL:-http://db:8080}
+      DB_PUSH_ON_START: ${DB_PUSH_ON_START:-false}
+      DISCORD_ADMIN_IDS: ${DISCORD_ADMIN_IDS:-}
+      DISCORD_BOT_START: ${DISCORD_BOT_START:-false}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?DISCORD_CLIENT_ID is required}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:?DISCORD_CLIENT_SECRET is required}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      HELIUS_API_KEY: ${HELIUS_API_KEY:?HELIUS_API_KEY is required}
+      HELIUS_CLUSTER: ${HELIUS_CLUSTER:-devnet}
+      INDEXER_DEBUG: ${INDEXER_DEBUG:-false}
+      NODE_ENV: production
+      PORT: 3000
+      SOLANA_ADMIN_ADDRESSES: ${SOLANA_ADMIN_ADDRESSES:-}
+      SOLANA_CLUSTER: ${SOLANA_CLUSTER:-devnet}
+      SOLANA_ENDPOINT_PUBLIC: ${SOLANA_ENDPOINT_PUBLIC:?SOLANA_ENDPOINT_PUBLIC is required}
+      WAIT_FOR_DATABASE: ${WAIT_FOR_DATABASE:-true}
+      WEB_URL: ${WEB_URL:-}
+    expose:
+      - '3000'
+    networks:
+      - default
+      - dokploy-network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required}
+    depends_on:
+      - api
+    environment:
+      HOST: 0.0.0.0
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://api:3000}
+      NODE_ENV: production
+      PORT: 3001
+    expose:
+      - '3001'
+    networks:
+      - default
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  db-data:

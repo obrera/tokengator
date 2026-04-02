@@ -1,4 +1,7 @@
 {
   "extends": "@tokengator/config/tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun-types"]
+  },
   "include": ["src", "test", "test-e2e", "test-integration"]
 }

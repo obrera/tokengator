@@ -46,7 +46,7 @@ function withDiscordEnv(overrides: Partial<Record<(typeof DISCORD_ENV_KEYS)[numb
 }
 
 describe('discord env', () => {
-  test('defaults DISCORD_BOT_START to true and leaves Discord secrets optional', async () => {
+  test('defaults DISCORD_BOT_START to false and leaves Discord secrets optional', async () => {
     const restoreEnv = withDiscordEnv({
       DISCORD_BOT_START: undefined,
       DISCORD_BOT_TOKEN: undefined,
@@ -58,7 +58,7 @@ describe('discord env', () => {
     try {
       const { env } = await import(`../src/discord.ts?test=${Date.now()}-default`)
 
-      expect(env.DISCORD_BOT_START).toBe(true)
+      expect(env.DISCORD_BOT_START).toBe(false)
       expect(env.DISCORD_BOT_TOKEN).toBeUndefined()
       expect(env.DISCORD_CLIENT_ID).toBeUndefined()
       expect(env.DISCORD_GUILD_ID).toBeUndefined()
