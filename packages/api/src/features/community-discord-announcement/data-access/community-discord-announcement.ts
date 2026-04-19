@@ -68,6 +68,7 @@ export type CommunityDiscordRoleUpdatesAnnouncementPayload = {
   changes: Array<{
     action: 'grant' | 'revoke'
     communityRoleName: string
+    discordRoleId: string | null
     discordRoleName: string | null
   }>
   discordAccountId: string
@@ -92,7 +93,13 @@ const communityDiscordAnnouncementDefinitions = [
 }>
 
 const communityDiscordAnnouncementMessageBuilders: {
-  [K in DiscordAnnouncementType]: (payload: CommunityDiscordAnnouncementPayloadByType[K]) => string | null
+  [K in DiscordAnnouncementType]: (payload: CommunityDiscordAnnouncementPayloadByType[K]) => {
+    embeds: Array<{
+      color: number
+      description: string
+      title: string
+    }>
+  } | null
 } = {
   role_updates: buildRoleUpdatesAnnouncementMessage,
 }
@@ -127,37 +134,58 @@ function buildCommunityDiscordAnnouncementTestMessageBody(input: {
 function buildRoleUpdatesAnnouncementMessage(payload: CommunityDiscordRoleUpdatesAnnouncementPayload) {
   const grantedRoles = payload.changes
     .filter((change) => change.action === 'grant')
-    .map((change) => change.discordRoleName ?? change.communityRoleName)
+    .map((change) => ({
+      label: change.discordRoleId
+        ? `<@&${change.discordRoleId}>`
+        : (change.discordRoleName ?? change.communityRoleName),
+      sortKey: change.discordRoleName ?? change.communityRoleName,
+    }))
   const revokedRoles = payload.changes
     .filter((change) => change.action === 'revoke')
-    .map((change) => change.discordRoleName ?? change.communityRoleName)
+    .map((change) => ({
+      label: change.discordRoleId
+        ? `<@&${change.discordRoleId}>`
+        : (change.discordRoleName ?? change.communityRoleName),
+      sortKey: change.discordRoleName ?? change.communityRoleName,
+    }))
 
   if (grantedRoles.length === 0 && revokedRoles.length === 0) {
     return null
   }
 
-  const lines = [
-    `Role updates applied for ${payload.userName}${payload.username ? ` (@${payload.username})` : ''}.`,
-    `Discord account: ${payload.discordAccountId}`,
-  ]
+  const memberLines = [`**User:** <@${payload.discordAccountId}>`, `**Discord account:** ${payload.discordAccountId}`]
+
+  if (payload.username) {
+    memberLines.splice(1, 0, `**Username:** @${payload.username}`)
+  }
+
+  const lines = ['Role changes were applied for a community member.', '', '**Member**', ...memberLines]
 
   if (grantedRoles.length > 0) {
-    lines.push('', 'Granted:')
+    lines.push('', '**Granted**')
 
-    for (const grantedRole of grantedRoles.sort((left, right) => left.localeCompare(right))) {
-      lines.push(`- ${grantedRole}`)
+    for (const grantedRole of grantedRoles.sort((left, right) => left.sortKey.localeCompare(right.sortKey))) {
+      lines.push(`- ${grantedRole.label}`)
     }
   }
 
   if (revokedRoles.length > 0) {
-    lines.push('', 'Revoked:')
+    lines.push('', '**Revoked**')
 
-    for (const revokedRole of revokedRoles.sort((left, right) => left.localeCompare(right))) {
-      lines.push(`- ${revokedRole}`)
+    for (const revokedRole of revokedRoles.sort((left, right) => left.sortKey.localeCompare(right.sortKey))) {
+      lines.push(`- ${revokedRole.label}`)
     }
   }
 
-  return lines.join('\n')
+  return {
+    embeds: [
+      {
+        color: 0x5865f2,
+        description: lines.join('\n'),
+        title: '🔔 Member Roles Updated',
+      },
+    ],
+  }
 }
 
 async function getStoredCommunityDiscordAnnouncementConfigsByOrganizationId(organizationId: string) {
@@ -382,9 +410,9 @@ export async function publishCommunityDiscordAnnouncement<TType extends DiscordA
     }
 
     const messageBuilder = communityDiscordAnnouncementMessageBuilders[input.type]
-    const message = messageBuilder(input.payload)
+    const body = messageBuilder(input.payload)
 
-    if (!message) {
+    if (!body) {
       return
     }
 
@@ -397,7 +425,7 @@ export async function publishCommunityDiscordAnnouncement<TType extends DiscordA
           allowed_mentions: {
             parse: [],
           },
-          content: message,
+          ...body,
         },
         channelId: config.channelId,
       },

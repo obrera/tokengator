@@ -529,6 +529,70 @@ describe('admin community Discord announcement catalog', () => {
     expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Organization:** Acme')
   })
 
+  test('publishes role update announcements as embeds', async () => {
+    const organizationId = crypto.randomUUID()
+
+    await insertOrganization({
+      id: organizationId,
+      name: 'Acme',
+      slug: 'acme',
+    })
+    await database.insert(communityRoleSchema.communityDiscordAnnouncement).values({
+      announcementType: 'role_updates',
+      channelId: '223456789012345678',
+      channelName: 'admin-role-updates',
+      createdAt: new Date('2026-04-02T12:10:00.000Z'),
+      enabled: true,
+      organizationId,
+      updatedAt: new Date('2026-04-02T12:10:00.000Z'),
+    })
+
+    await expect(
+      publishCommunityDiscordAnnouncement({
+        organizationId,
+        payload: {
+          changes: [
+            {
+              action: 'grant',
+              communityRoleName: 'Announcement Role',
+              discordRoleId: 'discord-role-announcement',
+              discordRoleName: 'Announcement Role',
+            },
+            {
+              action: 'revoke',
+              communityRoleName: 'Legacy Role',
+              discordRoleId: 'discord-role-legacy',
+              discordRoleName: 'Legacy Role',
+            },
+          ],
+          discordAccountId: 'discord-account-id',
+          userName: 'Announcement User',
+          username: 'announce',
+        },
+        type: 'role_updates',
+      }),
+    ).resolves.toBeUndefined()
+
+    expect(sentDiscordMessages).toEqual([
+      expect.objectContaining({
+        channelId: '223456789012345678',
+      }),
+    ])
+    expect(sentDiscordMessages[0]?.body?.content).toBeUndefined()
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]).toMatchObject({
+      color: 0x5865f2,
+      title: '🔔 Member Roles Updated',
+    })
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Member**')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**User:** <@discord-account-id>')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Username:** @announce')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Discord account:** discord-account-id')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Granted**')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('- <@&discord-role-announcement>')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Revoked**')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('- <@&discord-role-legacy>')
+  })
+
   test('swallows stored-config lookup failures while publishing announcements', async () => {
     const originalSelect = database.select.bind(database)
 
@@ -547,6 +611,7 @@ describe('admin community Discord announcement catalog', () => {
               {
                 action: 'grant',
                 communityRoleName: 'Announcement Role',
+                discordRoleId: 'discord-role-announcement',
                 discordRoleName: 'Announcement Role',
               },
             ],

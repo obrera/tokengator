@@ -1,4 +1,7 @@
-import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test'
+import { cleanup, render } from '@testing-library/react'
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test'
+// @ts-expect-error jsdom is installed for tests but does not expose declarations in this workspace.
+import { JSDOM } from 'jsdom'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type {
   AdminCommunityRoleDiscordGuildRolesResult,
@@ -133,9 +136,92 @@ const syncStatusResult = {
   organizationId: 'org-1',
 } satisfies AdminCommunityRoleSyncStatusResult
 
+const domGlobalKeys = [
+  'Element',
+  'Event',
+  'HTMLElement',
+  'MutationObserver',
+  'Node',
+  'SVGElement',
+  'document',
+  'getComputedStyle',
+  'navigator',
+  'window',
+] as const
+
+let domGlobalDescriptors: Array<[(typeof domGlobalKeys)[number], PropertyDescriptor | undefined]> = []
+let domWindow: Window | null = null
+
+function ensureDom() {
+  if (typeof document !== 'undefined') {
+    return
+  }
+
+  const dom = new JSDOM('<!doctype html><html><body></body></html>')
+  domGlobalDescriptors = domGlobalKeys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)])
+  domWindow = dom.window as unknown as Window
+
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    value: dom.window.document,
+  })
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: dom.window,
+  })
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: dom.window.navigator,
+  })
+  Object.defineProperty(globalThis, 'Element', {
+    configurable: true,
+    value: dom.window.Element,
+  })
+  Object.defineProperty(globalThis, 'Event', {
+    configurable: true,
+    value: dom.window.Event,
+  })
+  Object.defineProperty(globalThis, 'HTMLElement', {
+    configurable: true,
+    value: dom.window.HTMLElement,
+  })
+  Object.defineProperty(globalThis, 'MutationObserver', {
+    configurable: true,
+    value: dom.window.MutationObserver,
+  })
+  Object.defineProperty(globalThis, 'Node', {
+    configurable: true,
+    value: dom.window.Node,
+  })
+  Object.defineProperty(globalThis, 'SVGElement', {
+    configurable: true,
+    value: dom.window.SVGElement,
+  })
+  Object.defineProperty(globalThis, 'getComputedStyle', {
+    configurable: true,
+    value: dom.window.getComputedStyle.bind(dom.window),
+  })
+}
+
+function restoreDom() {
+  for (const [key, descriptor] of domGlobalDescriptors) {
+    if (descriptor) {
+      Object.defineProperty(globalThis, key, descriptor)
+    } else {
+      Reflect.deleteProperty(globalThis, key)
+    }
+  }
+
+  domWindow?.close()
+  domWindow = null
+  domGlobalDescriptors = []
+}
+
 let AdminCommunityFeatureDiscordEntry: typeof import('../src/features/admin-community/feature/admin-community-feature-discord-entry').AdminCommunityFeatureDiscordEntry
 
 beforeAll(async () => {
+  ensureDom()
+
   mock.module('../src/features/admin-community/data-access/use-admin-community-get-query', () => ({
     useAdminCommunityGetQuery: () => ({
       data: organization,
@@ -262,6 +348,11 @@ beforeAll(async () => {
 
 afterAll(() => {
   mock.restore()
+  restoreDom()
+})
+
+afterEach(() => {
+  cleanup()
 })
 
 describe('AdminCommunityFeatureDiscordEntry', () => {
@@ -283,5 +374,13 @@ describe('AdminCommunityFeatureDiscordEntry', () => {
     expect(markup).toContain('Discord role writes are paused while sync is disabled.')
     expect(markup).toContain('paused')
     expect(markup).toContain('disabled')
+  })
+
+  test('shows the selected channel label in the channel trigger instead of the raw id', () => {
+    const view = render(<AdminCommunityFeatureDiscordEntry initialOrganization={organization} />)
+    const channelTrigger = view.getByLabelText('Change channel')
+
+    expect(channelTrigger.textContent).toContain('#admin-role-updates · text')
+    expect(channelTrigger.textContent).not.toContain('223456789012345678')
   })
 })

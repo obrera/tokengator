@@ -141,6 +141,24 @@ export function AdminCommunityFeatureDiscordAnnouncements(props: AdminCommunityF
                   label: currentChannelLabel,
                 }
               : null
+          const channelItems = [
+            {
+              label: 'Select a channel',
+              value: unselectedChannelValue,
+            },
+            ...(missingChannelOption
+              ? [
+                  {
+                    label: missingChannelOption.label,
+                    value: missingChannelOption.id,
+                  },
+                ]
+              : []),
+            ...catalog.channels.map((channel) => ({
+              label: `#${channel.name} · ${channel.type}`,
+              value: channel.id,
+            })),
+          ]
           const selectedChannelIsPostable = catalog.channels.some((channel) => channel.id === channelDraft)
 
           return (
@@ -181,6 +199,7 @@ export function AdminCommunityFeatureDiscordAnnouncements(props: AdminCommunityF
                 </Label>
                 <Select
                   disabled={isUpsertPending || catalog.channels.length === 0}
+                  items={channelItems}
                   onValueChange={(value) => {
                     if (value == null) {
                       return
@@ -198,13 +217,9 @@ export function AdminCommunityFeatureDiscordAnnouncements(props: AdminCommunityF
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={unselectedChannelValue}>Select a channel</SelectItem>
-                    {missingChannelOption ? (
-                      <SelectItem value={missingChannelOption.id}>{missingChannelOption.label}</SelectItem>
-                    ) : null}
-                    {catalog.channels.map((channel) => (
-                      <SelectItem key={channel.id} value={channel.id}>
-                        {`#${channel.name} · ${channel.type}`}
+                    {channelItems.map((channelItem) => (
+                      <SelectItem key={channelItem.value} value={channelItem.value}>
+                        {channelItem.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

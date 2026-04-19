@@ -64,6 +64,19 @@ let mutationObserver:
 let runScheduledCommunityRoleDiscordSync: RunScheduledCommunityRoleDiscordSync
 let sentDiscordMessages: Array<{
   allowedMentionsParse: string[] | undefined
+  body:
+    | {
+        allowed_mentions?: {
+          parse?: string[]
+        }
+        content?: string
+        embeds?: Array<{
+          color?: number
+          description?: string
+          title?: string
+        }>
+      }
+    | undefined
   channelId: string
   content: string
 }> = []
@@ -833,6 +846,7 @@ beforeAll(async () => {
 
         sentDiscordMessages.push({
           allowedMentionsParse: options.body?.allowed_mentions?.parse,
+          body: options.body,
           channelId: options.channelId,
           content: options.body?.content ?? options.content ?? '',
         })
@@ -1120,10 +1134,19 @@ describe('admin community role Discord sync', () => {
       allowedMentionsParse: [],
       channelId: 'announcement-channel',
     })
-    expect(sentDiscordMessages[0]?.content).toContain('Role updates applied for Announcement User (@announce).')
-    expect(sentDiscordMessages[0]?.content).toContain('Discord account: discord-announcement-user')
-    expect(sentDiscordMessages[0]?.content).toContain('Granted:')
-    expect(sentDiscordMessages[0]?.content).toContain('- Announcement Role')
+    expect(sentDiscordMessages[0]?.body?.content).toBeUndefined()
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]).toMatchObject({
+      color: 0x5865f2,
+      title: '🔔 Member Roles Updated',
+    })
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Member**')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**User:** <@discord-announcement-user>')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Username:** @announce')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain(
+      '**Discord account:** discord-announcement-user',
+    )
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('**Granted**')
+    expect(sentDiscordMessages[0]?.body?.embeds?.[0]?.description).toContain('- <@&discord-role-announcement>')
   })
 
   test('does not publish role update messages when the announcement config is disabled', async () => {

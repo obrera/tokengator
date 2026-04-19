@@ -2316,6 +2316,7 @@ function toCommunityDiscordRoleUpdatesAnnouncementPayload(input: {
     .map((outcome) => ({
       action: outcome.attemptedAction,
       communityRoleName: outcome.communityRoleName,
+      discordRoleId: outcome.discordRoleId,
       discordRoleName: outcome.discordRoleName,
     }))
 
