@@ -6,6 +6,7 @@ export type { AdminAssetGroupIndexInput } from './data-access/admin-asset-group-
 export type { AdminAssetGroupListIndexRunsInput } from './data-access/admin-asset-group-list-index-runs-input'
 export type { AdminAssetGroupListInput } from './data-access/admin-asset-group-list-input'
 export type { AdminAssetGroupLookupInput } from './data-access/admin-asset-group-lookup-input-schema'
+export type { AdminAssetGroupResolverKind } from './data-access/admin-asset-group-resolver-kind'
 export type {
   AdminAssetGroupLookupAccountInfo,
   AdminAssetGroupLookupAsset,

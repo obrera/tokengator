@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { useRef, useState } from 'react'
-import type { AdminCommunityRoleInput } from '@tokengator/sdk'
+import type { AdminAssetGroupResolverKind as ResolverKind, AdminCommunityRoleInput } from '@tokengator/sdk'
 import { Button } from '@tokengator/ui/components/button'
 import { Checkbox } from '@tokengator/ui/components/checkbox'
 import { Input } from '@tokengator/ui/components/input'
@@ -8,10 +8,13 @@ import { Label } from '@tokengator/ui/components/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tokengator/ui/components/select'
 import { slugify } from '@tokengator/ui/util/slugify'
 
+import { getAssetGroupResolverKindLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
+
 export interface AdminCommunityRoleUiAssetGroupOption {
   enabled: boolean
   id: string
   label: string
+  resolverKind: ResolverKind
   type: 'collection' | 'mint'
 }
 
@@ -98,7 +101,9 @@ export function AdminCommunityRoleUiForm(props: AdminCommunityRoleUiFormProps) {
     },
     ...assetGroupOptions.map((assetGroup) => ({
       disabled: !assetGroup.enabled,
-      label: `${assetGroup.label} (${assetGroup.type}${assetGroup.enabled ? '' : ', disabled'})`,
+      label: `${assetGroup.label} (${getAssetGroupResolverKindLabel(assetGroup.resolverKind)}${
+        assetGroup.enabled ? '' : ', disabled'
+      })`,
       value: assetGroup.id,
     })),
   ]

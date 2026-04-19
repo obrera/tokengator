@@ -7,7 +7,7 @@ import { AdminAssetGroupUiTable } from '../src/features/admin-asset/ui/admin-ass
 describe('AdminAssetGroupUiTable', () => {
   test('renders the image column before the label column', () => {
     const assetGroup = {
-      address: 'collection-alpha',
+      address: 'realm-alpha',
       createdAt: new Date('2026-04-15T00:00:00.000Z'),
       decimals: 0,
       enabled: true,
@@ -15,7 +15,8 @@ describe('AdminAssetGroupUiTable', () => {
       imageUrl: 'https://example.com/collection-alpha.png',
       indexingStartedAt: null,
       indexingStatus: null,
-      label: 'Alpha Collection',
+      label: 'Alpha Realm',
+      resolverKind: 'realms-voters',
       symbol: 'ALPHA',
       type: 'mint',
       updatedAt: new Date('2026-04-15T00:00:00.000Z'),
@@ -32,7 +33,8 @@ describe('AdminAssetGroupUiTable', () => {
     expect(labelHeaderIndex).toBeGreaterThanOrEqual(0)
     expect(imageHeaderIndex).toBeLessThan(labelHeaderIndex)
     expect(markup).toContain('$ALPHA')
+    expect(markup).toContain('Realms Governance Power')
     expect(markup).toContain('https://example.com/collection-alpha.png')
-    expect(markup).toContain('Alpha Collection')
+    expect(markup).toContain('Alpha Realm')
   })
 })

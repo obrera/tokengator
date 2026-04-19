@@ -17,7 +17,7 @@ export function AdminAssetFeatureGroupCreate() {
   function getLookupCreateValues() {
     const suggestion = lookupAssetGroup.data?.suggestion
 
-    if (!suggestion?.resolvable || !suggestion.address || !suggestion.type) {
+    if (!suggestion?.resolvable || !suggestion.address || !suggestion.resolverKind || !suggestion.type) {
       return null
     }
 
@@ -27,6 +27,7 @@ export function AdminAssetFeatureGroupCreate() {
       enabled: true,
       imageUrl: suggestion.imageUrl,
       label: suggestion.label?.trim() || ellipsifyAddress(suggestion.address),
+      resolverKind: suggestion.resolverKind,
       symbol: suggestion.symbol,
       type: suggestion.type,
     }
@@ -93,7 +94,7 @@ export function AdminAssetFeatureGroupCreate() {
       <Card>
         <CardHeader>
           <CardTitle>Lookup Address</CardTitle>
-          <CardDescription>Find the collection or mint target supported by the indexer.</CardDescription>
+          <CardDescription>Find the collection, mint, or realm target supported by the indexer.</CardDescription>
         </CardHeader>
         <CardContent>
           <AdminAssetGroupUiCreateAddressForm

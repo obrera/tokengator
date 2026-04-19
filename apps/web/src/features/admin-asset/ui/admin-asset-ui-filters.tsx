@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
+import type { AdminAssetGroupResolverKind as ResolverKind } from '@tokengator/sdk'
 import { Button } from '@tokengator/ui/components/button'
 import { Input } from '@tokengator/ui/components/input'
 import { Label } from '@tokengator/ui/components/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tokengator/ui/components/select'
 
+import { getAssetGroupResolverKindLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
+
 export interface AdminAssetFiltersValues {
   address: string
   owner: string
-  resolverKind: '' | 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: '' | ResolverKind
 }
 
 interface AdminAssetUiFiltersProps {
@@ -23,12 +26,16 @@ const resolverKindItems = [
     value: allResolverKindsValue,
   },
   {
-    label: 'helius-collection-assets',
+    label: getAssetGroupResolverKindLabel('helius-collection-assets'),
     value: 'helius-collection-assets',
   },
   {
-    label: 'helius-token-accounts',
+    label: getAssetGroupResolverKindLabel('helius-token-accounts'),
     value: 'helius-token-accounts',
+  },
+  {
+    label: getAssetGroupResolverKindLabel('realms-voters'),
+    value: 'realms-voters',
   },
 ] as const
 

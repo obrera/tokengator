@@ -70,27 +70,28 @@ describe('ProfileUiCommunitiesCard', () => {
               {
                 assetGroups: [
                   {
-                    address: 'mint-island',
+                    address: 'realm-council',
                     id: 'asset-group-mint',
                     imageUrl: null,
-                    label: 'Island Token',
+                    label: 'Council Power',
                     maximumAmount: null,
                     minimumAmount: '1',
                     ownedAccounts: [
                       {
-                        address: 'mint-island',
+                        address: 'realm-council',
                         amount: '10',
                         id: 'mint-owned-alpha',
                         owner: 'wallet-alpha',
                       },
                       {
-                        address: 'mint-island',
+                        address: 'realm-council',
                         amount: '15',
                         id: 'mint-owned-beta',
                         owner: 'wallet-beta',
                       },
                     ],
                     ownedAmount: '25',
+                    resolverKind: 'realms-voters',
                     type: 'mint',
                   },
                   {
@@ -125,6 +126,7 @@ describe('ProfileUiCommunitiesCard', () => {
                         ],
                       },
                     ],
+                    resolverKind: 'helius-collection-assets',
                     type: 'collection',
                   },
                 ],
@@ -174,7 +176,8 @@ describe('ProfileUiCommunitiesCard', () => {
     expect(markup).toContain('sm:grid-cols-4')
     expect(markup).toContain('Background: Forest')
     expect(markup).toContain('Hat: Crown')
-    expect(markup).toContain('Island Token')
+    expect(markup).toContain('Council Power')
+    expect(markup).toContain('Realms: Council Power')
     expect(markup).toContain('Raw total amount')
     expect(markup).toContain('25')
     expect(markup).toContain('Wallet holding 1')
@@ -185,6 +188,9 @@ describe('ProfileUiCommunitiesCard', () => {
     expect(markup).toContain('No asset-backed roles yet.')
     expect(markup).not.toContain('Genesis Holder')
     expect(markup).not.toContain('asset-owned-1-address')
-    expect(markup.indexOf('Collection: PERKS')).toBeLessThan(markup.indexOf('Mint: Island Token'))
+    expect(markup).toContain('Collection: PERKS')
+    const collectionIndex = markup.indexOf('Collection: PERKS')
+    const realmsIndex = markup.indexOf('Realms: Council Power')
+    expect(collectionIndex).toBeLessThan(realmsIndex)
   })
 })

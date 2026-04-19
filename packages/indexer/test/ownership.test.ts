@@ -18,6 +18,14 @@ const TOKEN_RESOLVER = {
   kind: 'helius-token-accounts',
 } as const
 
+const REALMS_RESOLVER = {
+  config: {
+    realm: 'realm-a',
+  },
+  id: 'resolver-realms',
+  kind: 'realms-voters',
+} as const
+
 const COLLECTION_RESOLVER = {
   config: {
     collection: 'collection-a',
@@ -294,6 +302,49 @@ describe('normalizeOwnershipRows', () => {
     })
 
     expect(rows).toEqual([])
+  })
+
+  test('normalizes Realms voter weights as mint-like ownership rows', () => {
+    const rows = normalizeOwnershipRows({
+      items: [
+        {
+          deposit: 'deposit-a',
+          publicKey: 'voter-account-a',
+          realm: 'realm-a',
+          registrar: 'registrar-a',
+          voter: 'wallet-a',
+          weight: '42',
+        },
+      ],
+      page: 4,
+      resolver: REALMS_RESOLVER,
+    })
+
+    expect(rows).toEqual([
+      {
+        amount: '42',
+        assetId: 'voter-account-a',
+        metadataDescription: null,
+        metadataImageUrl: null,
+        metadataJson: {
+          deposit: 'deposit-a',
+          publicKey: 'voter-account-a',
+          realm: 'realm-a',
+          registrar: 'registrar-a',
+          voter: 'wallet-a',
+          weight: '42',
+        },
+        metadataJsonUrl: null,
+        metadataName: 'Realms Voter Account',
+        metadataProgramAccount: null,
+        metadataSymbol: null,
+        owner: 'wallet-a',
+        page: 4,
+        resolverId: 'resolver-realms',
+        resolverKind: 'realms-voters',
+        traits: [],
+      },
+    ])
   })
 })
 

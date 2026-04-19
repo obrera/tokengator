@@ -103,6 +103,12 @@ interface TokenAccountLike {
   owner?: string
 }
 
+interface RealmsVoterLike {
+  publicKey?: string
+  voter?: string
+  weight?: number | string | null
+}
+
 export function normalizeOwnershipRows(input: {
   items: unknown[]
   page: number
@@ -114,6 +120,10 @@ export function normalizeOwnershipRows(input: {
 
   if (input.resolver.kind === 'helius-token-accounts') {
     return normalizeTokenAccountsRows(input)
+  }
+
+  if (input.resolver.kind === 'realms-voters') {
+    return normalizeRealmsVoterRows(input)
   }
 
   throw new Error(`Unsupported resolver kind for ownership normalization: ${input.resolver.kind}`)
@@ -371,6 +381,43 @@ function normalizeTokenAccountsRows(input: {
       page: input.page,
       resolverId: input.resolver.id,
       resolverKind: input.resolver.kind,
+    })
+  }
+
+  return rows
+}
+
+function normalizeRealmsVoterRows(input: { items: unknown[]; page: number; resolver: ResolverInput }): OwnershipRow[] {
+  const rows: OwnershipRow[] = []
+
+  for (const item of input.items as RealmsVoterLike[]) {
+    const assetId = item.publicKey
+    const owner = item.voter
+
+    if (!owner || !assetId) {
+      continue
+    }
+
+    const amount = normalizeAmountToString(item.weight)
+    if (amount === null) {
+      continue
+    }
+
+    rows.push({
+      amount,
+      assetId,
+      metadataDescription: null,
+      metadataImageUrl: null,
+      metadataJson: sanitizeRawPayload(item),
+      metadataJsonUrl: null,
+      metadataName: 'Realms Voter Account',
+      metadataProgramAccount: null,
+      metadataSymbol: null,
+      owner,
+      page: input.page,
+      resolverId: input.resolver.id,
+      resolverKind: input.resolver.kind,
+      traits: [],
     })
   }
 

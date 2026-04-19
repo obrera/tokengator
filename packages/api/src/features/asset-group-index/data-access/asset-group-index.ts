@@ -3,6 +3,8 @@ import { db, type Database } from '@tokengator/db'
 import { asset, assetGroup, assetGroupIndexRun, assetTrait } from '@tokengator/db/schema/asset'
 import {
   createHeliusResolvers,
+  createRealmsApiAdapter,
+  createRealmsResolvers,
   createHeliusSdkAdapter,
   createIndexer,
   hasPositiveAmount,
@@ -13,6 +15,7 @@ import {
   type OwnershipTrait,
   type ResolverInput,
   type ResolverKind,
+  REALMS_VOTERS,
 } from '@tokengator/indexer'
 import { getAppLogger } from '@tokengator/logger'
 
@@ -79,6 +82,7 @@ class AssetGroupIndexExecutionError extends Error {
 export interface AssetGroupRecordForIndexing {
   address: string
   id: string
+  resolverKind: ResolverKind
   type: 'collection' | 'mint'
 }
 
@@ -209,26 +213,37 @@ function getExcludedColumn(columnName: string) {
 }
 
 function getResolverInput(entry: AssetGroupRecordForIndexing): ResolverInput<
-  { collection: string } | { mint: string }
+  { collection: string } | { mint: string } | { realm: string }
 > & {
   kind: ResolverKind
 } {
-  if (entry.type === 'collection') {
-    return {
-      config: {
-        collection: entry.address,
-      },
-      id: entry.id,
-      kind: HELIUS_COLLECTION_ASSETS,
-    }
-  }
-
-  return {
-    config: {
-      mint: entry.address,
-    },
-    id: entry.id,
-    kind: HELIUS_TOKEN_ACCOUNTS,
+  switch (entry.resolverKind) {
+    case HELIUS_COLLECTION_ASSETS:
+      return {
+        config: {
+          collection: entry.address,
+        },
+        id: entry.id,
+        kind: HELIUS_COLLECTION_ASSETS,
+      }
+    case HELIUS_TOKEN_ACCOUNTS:
+      return {
+        config: {
+          mint: entry.address,
+        },
+        id: entry.id,
+        kind: HELIUS_TOKEN_ACCOUNTS,
+      }
+    case REALMS_VOTERS:
+      return {
+        config: {
+          realm: entry.address,
+        },
+        id: entry.id,
+        kind: REALMS_VOTERS,
+      }
+    default:
+      throw new AssetGroupIndexConfigError(`Unsupported resolver kind: ${entry.resolverKind}`)
   }
 }
 
@@ -443,8 +458,9 @@ async function executeAssetGroupIndex(
       apiKey: options.apiKey,
       network: getSupportedHeliusNetwork(options.heliusCluster),
     })
+  const realmsAdapter = createRealmsApiAdapter()
   const indexer = createIndexer({
-    resolvers: createHeliusResolvers(adapter),
+    resolvers: [...createHeliusResolvers(adapter), ...createRealmsResolvers(realmsAdapter)],
   })
   const progress = {
     deleted: 0,
@@ -1064,6 +1080,7 @@ export async function listEnabledAssetGroupsDueForScheduledIndexing(input?: { da
     .select({
       address: assetGroup.address,
       id: assetGroup.id,
+      resolverKind: assetGroup.resolverKind,
       type: assetGroup.type,
     })
     .from(assetGroup)

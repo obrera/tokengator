@@ -48,6 +48,7 @@ export function AdminCommunityFeatureRoleCatalog(props: AdminCommunityFeatureRol
       enabled: assetGroup.enabled,
       id: assetGroup.id,
       label: assetGroup.label,
+      resolverKind: assetGroup.resolverKind,
       type: assetGroup.type,
     })) ?? []
   const editingRole = communityRoles.find((communityRole) => communityRole.id === editingRoleId) ?? null

@@ -6,6 +6,7 @@ import { adminAssetGroupLookupInputSchema } from '../src/features/admin-asset-gr
 const ACCOUNT = 'So11111111111111111111111111111111111111112'
 const COLLECTION = 'CndyV3LdqHUYguc8SgxMny41vYFmx8Ddy8UsNfotxyiB'
 const MPL_CORE_PROGRAM_ID = 'CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d'
+const REALMS_PROGRAM_ID = 'GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw'
 const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
 const TOKEN_METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
 const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
@@ -206,6 +207,206 @@ describe('admin asset group lookup', () => {
       symbol: 'EXT',
       type: 'mint',
     })
+  })
+
+  test('suggests the Realms resolver for governance accounts', async () => {
+    const calls: Array<{ method: string; params: unknown } | { url: string }> = []
+    const fetch = async (url: string | URL, init?: RequestInit) => {
+      if (!init?.body) {
+        calls.push({
+          url: String(url),
+        })
+
+        return Response.json([
+          {
+            authority: 'authority-a',
+            council: 'council-a',
+            id: 1,
+            mint: 'mint-a',
+            name: 'Realm Alpha',
+            plugin: 'plugin-a',
+            program: REALMS_PROGRAM_ID,
+            publicKey: ACCOUNT,
+          },
+        ])
+      }
+
+      const body = JSON.parse(String(init.body)) as { method: string; params: unknown }
+
+      calls.push({
+        method: body.method,
+        params: body.params,
+      })
+
+      return Response.json({
+        id: 'tokengator-admin-asset-group-lookup',
+        jsonrpc: '2.0',
+        result:
+          body.method === 'getAccountInfo'
+            ? accountInfo({
+                owner: REALMS_PROGRAM_ID,
+                parsedType: 'realmV2',
+                space: 1024,
+              })
+            : asset({}),
+      })
+    }
+
+    const result = await lookupAdminAssetGroup({
+      account: ACCOUNT,
+      apiKey: 'helius-api-key',
+      cluster: 'devnet',
+      fetch,
+    })
+
+    expect(calls).toEqual([
+      {
+        method: 'getAccountInfo',
+        params: [ACCOUNT, { encoding: 'jsonParsed' }],
+      },
+      {
+        method: 'getAsset',
+        params: {
+          id: ACCOUNT,
+        },
+      },
+      {
+        url: 'https://realms-api.com/realms',
+      },
+    ])
+    expect(result.suggestion).toEqual({
+      address: ACCOUNT,
+      decimals: 0,
+      imageUrl: null,
+      label: 'Realm Alpha',
+      reason: 'realm',
+      resolvable: true,
+      resolverKind: 'realms-voters',
+      symbol: null,
+      type: 'mint',
+    })
+  })
+
+  test('does not suggest non-realm governance accounts', async () => {
+    const calls: Array<{ method: string; params: unknown } | { url: string }> = []
+    const fetch = async (url: string | URL, init?: RequestInit) => {
+      if (!init?.body) {
+        calls.push({
+          url: String(url),
+        })
+
+        return Response.json([
+          {
+            authority: 'authority-a',
+            council: 'council-a',
+            id: 1,
+            mint: 'mint-a',
+            name: 'Realm Alpha',
+            plugin: 'plugin-a',
+            program: REALMS_PROGRAM_ID,
+            publicKey: 'another-realm',
+          },
+        ])
+      }
+
+      const body = JSON.parse(String(init.body)) as { method: string; params: unknown }
+
+      calls.push({
+        method: body.method,
+        params: body.params,
+      })
+
+      return Response.json({
+        id: 'tokengator-admin-asset-group-lookup',
+        jsonrpc: '2.0',
+        result:
+          body.method === 'getAccountInfo'
+            ? accountInfo({
+                owner: REALMS_PROGRAM_ID,
+                parsedType: 'governanceV2',
+                space: 1024,
+              })
+            : asset({}),
+      })
+    }
+
+    const result = await lookupAdminAssetGroup({
+      account: ACCOUNT,
+      apiKey: 'helius-api-key',
+      cluster: 'devnet',
+      fetch,
+    })
+
+    expect(calls).toEqual([
+      {
+        method: 'getAccountInfo',
+        params: [ACCOUNT, { encoding: 'jsonParsed' }],
+      },
+      {
+        method: 'getAsset',
+        params: {
+          id: ACCOUNT,
+        },
+      },
+      {
+        url: 'https://realms-api.com/realms',
+      },
+    ])
+    expect(result.suggestion).toEqual({
+      address: null,
+      decimals: 0,
+      imageUrl: null,
+      label: null,
+      reason: 'unsupported_program',
+      resolvable: false,
+      resolverKind: null,
+      symbol: null,
+      type: null,
+    })
+    expect(result.warnings).toEqual([])
+  })
+
+  test('falls back when Realms lookup fails', async () => {
+    const fetch = async (_url: string | URL, init?: RequestInit) => {
+      if (!init?.body) {
+        throw new Error('Realms API unavailable')
+      }
+
+      const body = JSON.parse(String(init.body)) as { method: string; params: unknown }
+
+      return Response.json({
+        id: 'tokengator-admin-asset-group-lookup',
+        jsonrpc: '2.0',
+        result:
+          body.method === 'getAccountInfo'
+            ? accountInfo({
+                owner: REALMS_PROGRAM_ID,
+                parsedType: 'realmV2',
+                space: 1024,
+              })
+            : asset({}),
+      })
+    }
+
+    const result = await lookupAdminAssetGroup({
+      account: ACCOUNT,
+      apiKey: 'helius-api-key',
+      cluster: 'devnet',
+      fetch,
+    })
+
+    expect(result.suggestion).toEqual({
+      address: null,
+      decimals: 0,
+      imageUrl: null,
+      label: null,
+      reason: 'unsupported_program',
+      resolvable: false,
+      resolverKind: null,
+      symbol: null,
+      type: null,
+    })
+    expect(result.warnings).toEqual(['Realms API unavailable'])
   })
 
   test('prefers parsed mint decimals when they are zero', async () => {

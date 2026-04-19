@@ -3,7 +3,7 @@ import { db } from '@tokengator/db'
 import { asset, assetGroup, assetTrait } from '@tokengator/db/schema/asset'
 import { solanaWallet } from '@tokengator/db/schema/auth'
 import { communityRole, communityRoleCondition } from '@tokengator/db/schema/community-role'
-import { normalizeAmountToBigInt } from '@tokengator/indexer'
+import { normalizeAmountToBigInt, type ResolverKind } from '@tokengator/indexer'
 
 import { getSqliteChunkSize, splitIntoChunks } from '../../../lib/sqlite'
 
@@ -24,6 +24,7 @@ type ProfileCommunityAssetRoleConditionRecord = {
   maximumAmount: string | null
   minimumAmount: string
   organizationId: string
+  resolverKind: ResolverKind
   roleId: string
   roleMatchMode: 'all' | 'any'
   roleName: string
@@ -49,7 +50,7 @@ type ProfileCommunityAssetRow = {
   metadataName: string | null
   metadataSymbol: string | null
   owner: string
-  resolverKind: string
+  resolverKind: ResolverKind
   visibleLabel: string
 }
 
@@ -159,6 +160,7 @@ async function listProfileCommunityAssetRoleConditionRecords(organizationIds: st
       maximumAmount: communityRoleCondition.maximumAmount,
       minimumAmount: communityRoleCondition.minimumAmount,
       organizationId: communityRole.organizationId,
+      resolverKind: assetGroup.resolverKind,
       roleId: communityRole.id,
       roleMatchMode: communityRole.matchMode,
       roleName: communityRole.name,
@@ -214,6 +216,7 @@ function toProfileCommunityAssetRoleGroupEntity(input: {
         ...currentAsset,
         traits: input.traitsByAssetId.get(currentAsset.id) ?? [],
       })),
+      resolverKind: input.condition.resolverKind,
       type: 'collection',
     }
   }
@@ -227,16 +230,19 @@ function toProfileCommunityAssetRoleGroupEntity(input: {
     minimumAmount: input.condition.minimumAmount,
     ownedAccounts: input.mintAccountsByAssetGroupId.get(input.condition.id) ?? [],
     ownedAmount: (input.mintAmountsByAssetGroupId.get(input.condition.id) ?? 0n).toString(),
+    resolverKind: input.condition.resolverKind,
     type: 'mint',
   }
 }
 
 export async function profileCommunityAssetRolesList(input: { organizationIds: string[]; userId: string }) {
   const roleConditionRecords = await listProfileCommunityAssetRoleConditionRecords(input.organizationIds)
+  const assetGroupResolverKindById = new Map<string, ResolverKind>()
   const assetGroupTypeById = new Map<string, 'collection' | 'mint'>()
   const roleRecordsById = new Map<string, ProfileCommunityAssetRoleRecord>()
 
   for (const conditionRecord of roleConditionRecords) {
+    assetGroupResolverKindById.set(conditionRecord.id, conditionRecord.resolverKind)
     assetGroupTypeById.set(conditionRecord.id, conditionRecord.type)
 
     const existingRoleRecord = roleRecordsById.get(conditionRecord.roleId) ?? {
@@ -308,17 +314,18 @@ export async function profileCommunityAssetRolesList(input: { organizationIds: s
         continue
       }
 
+      const assetGroupResolverKind = assetGroupResolverKindById.get(assetRow.assetGroupId)
       const assetGroupType = assetGroupTypeById.get(assetRow.assetGroupId)
 
-      if (!assetGroupType) {
+      if (!assetGroupResolverKind || !assetGroupType) {
+        continue
+      }
+
+      if (assetRow.resolverKind !== assetGroupResolverKind) {
         continue
       }
 
       if (assetGroupType === 'collection') {
-        if (assetRow.resolverKind !== 'helius-collection-assets') {
-          continue
-        }
-
         const existingAssets = collectionAssetsByAssetGroupId.get(assetRow.assetGroupId) ?? []
 
         existingAssets.push({
@@ -332,10 +339,6 @@ export async function profileCommunityAssetRolesList(input: { organizationIds: s
           traits: [],
         })
         collectionAssetsByAssetGroupId.set(assetRow.assetGroupId, existingAssets)
-        continue
-      }
-
-      if (assetRow.resolverKind !== 'helius-token-accounts') {
         continue
       }
 

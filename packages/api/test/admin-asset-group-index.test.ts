@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer'
 
 type AssetSchema = typeof import('@tokengator/db/schema/asset')
 type AutomationSchema = typeof import('@tokengator/db/schema/automation')
@@ -37,13 +38,25 @@ let listEnabledAssetGroupsDueForScheduledIndexing: ListEnabledAssetGroupsDueForS
 let releaseAutomationLock: ReleaseAutomationLock
 let renewAutomationLock: RenewAutomationLock
 let runScheduledAssetGroupIndex: RunScheduledAssetGroupIndex
+
 function buildIndexedAssetId(input: {
   address: string
   assetGroupId: string
   owner: string
-  resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: AssetGroupResolverKind
 }) {
   return `v2:${JSON.stringify([input.assetGroupId, input.address, input.owner, input.resolverKind])}`
+}
+
+function getAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGroupResolverKind {
+  return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
+}
+
+function getIndexableAssetGroup(input: { address: string; id: string; type: 'collection' | 'mint' }) {
+  return {
+    ...input,
+    resolverKind: getAssetGroupResolverKind(input.type),
+  }
 }
 
 function decodeOutput(buffer: Uint8Array | undefined) {
@@ -255,6 +268,7 @@ async function insertAssetGroupRecord(input: {
     facetTotals: input.facetTotals ? JSON.stringify(input.facetTotals) : null,
     id: input.id,
     label: input.address,
+    resolverKind: getAssetGroupResolverKind(input.type),
     type: input.type,
     updatedAt: now,
   })
@@ -268,7 +282,7 @@ async function insertAssetRecord(input: {
   indexedAt: Date
   metadataName?: string | null
   owner: string
-  resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: AssetGroupResolverKind
   traits?: Array<{ groupId: string; groupLabel: string; value: string; valueLabel: string }>
 }) {
   const assetId = crypto.randomUUID()
@@ -676,11 +690,11 @@ describe('indexAssetGroup', () => {
     const result = await indexAssetGroup({
       adapter,
       apiKey: 'helius-api-key',
-      assetGroup: {
+      assetGroup: getIndexableAssetGroup({
         address: 'collection-acme',
         id: assetGroupId,
         type: 'collection',
-      },
+      }),
       heliusCluster: 'devnet',
       now: () => now,
     })
@@ -883,11 +897,11 @@ describe('indexAssetGroup', () => {
     const result = await indexAssetGroup({
       adapter,
       apiKey: 'helius-api-key',
-      assetGroup: {
+      assetGroup: getIndexableAssetGroup({
         address: 'collection-acme',
         id: assetGroupId,
         type: 'collection',
-      },
+      }),
       heliusCluster: 'devnet',
       now: () => now,
     })
@@ -966,11 +980,11 @@ describe('indexAssetGroup', () => {
       indexAssetGroup({
         adapter,
         apiKey: 'helius-api-key',
-        assetGroup: {
+        assetGroup: getIndexableAssetGroup({
           address: 'collection-acme',
           id: assetGroupId,
           type: 'collection',
-        },
+        }),
         heliusCluster: 'devnet',
         now: () => now,
       }),
@@ -1065,11 +1079,11 @@ describe('indexAssetGroup', () => {
           ],
         }).adapter,
         apiKey: 'helius-api-key',
-        assetGroup: {
+        assetGroup: getIndexableAssetGroup({
           address: 'collection-cleanup-atomicity',
           id: assetGroupId,
           type: 'collection',
-        },
+        }),
         database: createUpdateFailureDatabase(assetSchema.assetGroup) as never,
         heliusCluster: 'devnet',
         now: () => now,
@@ -1165,11 +1179,11 @@ describe('indexAssetGroup', () => {
           ],
         }).adapter,
         apiKey: 'helius-api-key',
-        assetGroup: {
+        assetGroup: getIndexableAssetGroup({
           address: 'collection-atomicity',
           id: assetGroupId,
           type: 'collection',
-        },
+        }),
         database: createInsertFailureDatabase(assetSchema.assetTrait) as never,
         heliusCluster: 'devnet',
         now: () => now,
@@ -1281,11 +1295,11 @@ describe('indexAssetGroup', () => {
       indexAssetGroup({
         adapter,
         apiKey: 'helius-api-key',
-        assetGroup: {
+        assetGroup: getIndexableAssetGroup({
           address: 'collection-lock-loss',
           id: assetGroupId,
           type: 'collection',
-        },
+        }),
         heliusCluster: 'devnet',
         now: () => now,
       }),
@@ -1352,11 +1366,11 @@ describe('indexAssetGroup', () => {
     const result = await indexAssetGroup({
       adapter,
       apiKey: 'helius-api-key',
-      assetGroup: {
+      assetGroup: getIndexableAssetGroup({
         address: 'mint-acme',
         id: assetGroupId,
         type: 'mint',
-      },
+      }),
       heliusCluster: 'devnet',
       now: () => now,
     })
@@ -1426,11 +1440,11 @@ describe('indexAssetGroup', () => {
     const result = await indexAssetGroup({
       adapter,
       apiKey: 'helius-api-key',
-      assetGroup: {
+      assetGroup: getIndexableAssetGroup({
         address: 'collection-large-page',
         id: assetGroupId,
         type: 'collection',
-      },
+      }),
       heliusCluster: 'devnet',
       now: () => now,
     })
@@ -1462,11 +1476,11 @@ describe('indexAssetGroup', () => {
           pageOneItems: [],
         }).adapter,
         apiKey: 'helius-api-key',
-        assetGroup: {
+        assetGroup: getIndexableAssetGroup({
           address: 'collection-lock-release',
           id: assetGroupId,
           type: 'collection',
-        },
+        }),
         database: createInsertFailureDatabase(assetSchema.assetGroupIndexRun) as never,
         heliusCluster: 'devnet',
         now: () => new Date('2026-03-31T13:45:00.000Z'),
@@ -1503,11 +1517,11 @@ describe('indexAssetGroup', () => {
         ],
       }).adapter,
       apiKey: 'helius-api-key',
-      assetGroup: {
+      assetGroup: getIndexableAssetGroup({
         address: 'collection-failure-history',
         id: assetGroupId,
         type: 'collection',
-      },
+      }),
       heliusCluster: 'devnet',
       now: () => firstRunAt,
     })
@@ -1532,11 +1546,11 @@ describe('indexAssetGroup', () => {
           pageTwoError: new Error('Page 2 failed.'),
         }).adapter,
         apiKey: 'helius-api-key',
-        assetGroup: {
+        assetGroup: getIndexableAssetGroup({
           address: 'collection-failure-history',
           id: assetGroupId,
           type: 'collection',
-        },
+        }),
         heliusCluster: 'devnet',
         now: () => secondRunAt,
       }),
@@ -1603,11 +1617,11 @@ describe('indexAssetGroup', () => {
         pageOneItems: [],
       }).adapter,
       apiKey: 'helius-api-key',
-      assetGroup: {
+      assetGroup: getIndexableAssetGroup({
         address: 'collection-recent',
         id: recentAssetGroupId,
         type: 'collection',
-      },
+      }),
       heliusCluster: 'devnet',
       now: () => runAt,
     })
@@ -1617,26 +1631,55 @@ describe('indexAssetGroup', () => {
         now: () => new Date('2026-03-31T15:29:00.000Z'),
       }),
     ).resolves.toEqual([
-      {
+      getIndexableAssetGroup({
         address: 'collection-due',
         id: dueAssetGroupId,
         type: 'collection',
-      },
+      }),
     ])
     await expect(
       listEnabledAssetGroupsDueForScheduledIndexing({
         now: () => new Date('2026-03-31T16:01:00.000Z'),
       }),
     ).resolves.toEqual([
-      {
+      getIndexableAssetGroup({
         address: 'collection-due',
         id: dueAssetGroupId,
         type: 'collection',
-      },
-      {
+      }),
+      getIndexableAssetGroup({
         address: 'collection-recent',
         id: recentAssetGroupId,
         type: 'collection',
+      }),
+    ])
+  })
+
+  test('returns the persisted resolverKind when listing due asset groups', async () => {
+    const now = new Date('2026-03-31T15:00:00.000Z')
+
+    await database.insert(assetSchema.assetGroup).values({
+      address: 'realm-council',
+      createdAt: now,
+      enabled: true,
+      id: 'asset-group-realm',
+      indexingStartedAt: null,
+      label: 'Realm Council',
+      resolverKind: 'realms-voters',
+      type: 'mint',
+      updatedAt: now,
+    })
+
+    await expect(
+      listEnabledAssetGroupsDueForScheduledIndexing({
+        now: () => new Date('2026-03-31T15:30:00.000Z'),
+      }),
+    ).resolves.toEqual([
+      {
+        address: 'realm-council',
+        id: 'asset-group-realm',
+        resolverKind: 'realms-voters',
+        type: 'mint',
       },
     ])
   })
@@ -1655,6 +1698,7 @@ describe('indexAssetGroup', () => {
           id: `asset-group-${suffix}`,
           indexingStartedAt: null,
           label: `Collection ${suffix}`,
+          resolverKind: 'helius-collection-assets' as const,
           type: 'collection' as const,
           updatedAt: now,
         }

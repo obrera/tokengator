@@ -1,5 +1,6 @@
 import { configureSync, resetSync, type LogRecord } from '@logtape/logtape'
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer'
 
 type RunScheduledCommunityRoleDiscordSyncResult = Awaited<
   ReturnType<(typeof import('../src/features/community-role-sync'))['runScheduledCommunityRoleDiscordSync']>
@@ -12,7 +13,13 @@ let callOrder: string[] = []
 let discordOrganizationsDue: string[] = []
 let membershipOrganizationsDue: string[] = []
 let scheduledJobs: typeof import('../src/scheduled-jobs')
-let assetGroupsDue: Array<{ address: string; id: string; type: 'collection' | 'mint' }> = []
+
+let assetGroupsDue: Array<{
+  address: string
+  id: string
+  resolverKind: AssetGroupResolverKind
+  type: 'collection' | 'mint'
+}> = []
 let logRecords: LogRecord[] = []
 let assetGroupRunResults = new Map<
   string,
@@ -21,7 +28,7 @@ let assetGroupRunResults = new Map<
     deleted: number
     inserted: number
     pages: number
-    resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+    resolverKind: AssetGroupResolverKind
     startedAt: Date
     total: number
     updated: number
@@ -30,6 +37,10 @@ let assetGroupRunResults = new Map<
 
 const communityDiscordResults = new Map<string, RunScheduledCommunityRoleDiscordSyncResult>()
 const communityMembershipResults = new Map<string, RunScheduledCommunityRoleSyncResult>()
+
+function getAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGroupResolverKind {
+  return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
+}
 
 function configureTestLogging(onRecord?: (record: LogRecord) => void) {
   logRecords = []
@@ -100,6 +111,7 @@ describe('runScheduledJobsPass', () => {
       {
         address: 'collection-a',
         id: 'asset-group-a',
+        resolverKind: getAssetGroupResolverKind('collection'),
         type: 'collection',
       },
     ]

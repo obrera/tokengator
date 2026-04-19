@@ -5,6 +5,7 @@ import { Button } from '@tokengator/ui/components/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 import { UiInfoCard, UiInfoCardLabel, UiInfoCardValue } from '@tokengator/ui/components/ui-info-card'
 
+import { getAssetGroupResolverKindLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
 import { ellipsifyAddress } from '../util/ellipsify-address'
 
 interface AdminAssetGroupUiCreatePreviewProps {
@@ -21,9 +22,12 @@ export function AdminAssetGroupUiCreatePreview(props: AdminAssetGroupUiCreatePre
   const { isCreating, isLookupPending, isUpdating, lookup, onConfirm, onOpenExisting, onUpdateMetadata } = props
   const existingAssetGroup = lookup.existingAssetGroup
   const { suggestion, warnings } = lookup
-  const canCreate = suggestion.resolvable && Boolean(suggestion.address && suggestion.type)
+  const canCreate = suggestion.resolvable && Boolean(suggestion.address && suggestion.resolverKind && suggestion.type)
   const hasDecimalsUpdate = Boolean(existingAssetGroup && existingAssetGroup.decimals !== suggestion.decimals)
   const hasImageUrlUpdate = Boolean(existingAssetGroup && existingAssetGroup.imageUrl !== suggestion.imageUrl)
+  const hasResolverKindUpdate = Boolean(
+    existingAssetGroup && suggestion.resolverKind && existingAssetGroup.resolverKind !== suggestion.resolverKind,
+  )
   const hasSymbolUpdate = Boolean(existingAssetGroup && existingAssetGroup.symbol !== suggestion.symbol)
   const suggestedLabel = suggestion.label?.trim() || (suggestion.address ? ellipsifyAddress(suggestion.address) : '')
   const hasLabelOrTypeUpdate = Boolean(
@@ -35,8 +39,9 @@ export function AdminAssetGroupUiCreatePreview(props: AdminAssetGroupUiCreatePre
     canCreate &&
     Boolean(
       existingAssetGroup &&
+      suggestion.resolverKind &&
       suggestion.type &&
-      (hasDecimalsUpdate || hasImageUrlUpdate || hasLabelOrTypeUpdate || hasSymbolUpdate),
+      (hasDecimalsUpdate || hasImageUrlUpdate || hasLabelOrTypeUpdate || hasResolverKindUpdate || hasSymbolUpdate),
     )
 
   return (
@@ -84,8 +89,10 @@ export function AdminAssetGroupUiCreatePreview(props: AdminAssetGroupUiCreatePre
               <UiInfoCardValue>{suggestion.decimals}</UiInfoCardValue>
             </UiInfoCard>
             <UiInfoCard>
-              <UiInfoCardLabel>Resolver</UiInfoCardLabel>
-              <UiInfoCardValue className="font-mono text-xs break-all">{suggestion.resolverKind}</UiInfoCardValue>
+              <UiInfoCardLabel>Source</UiInfoCardLabel>
+              <UiInfoCardValue>
+                {suggestion.resolverKind ? getAssetGroupResolverKindLabel(suggestion.resolverKind) : 'None'}
+              </UiInfoCardValue>
             </UiInfoCard>
             <UiInfoCard>
               <UiInfoCardLabel>Symbol</UiInfoCardLabel>
@@ -115,6 +122,12 @@ export function AdminAssetGroupUiCreatePreview(props: AdminAssetGroupUiCreatePre
                   <div className="text-muted-foreground">
                     Lookup metadata differs from the existing record. Current: {existingAssetGroup.type} /{' '}
                     {existingAssetGroup.label}. Suggested: {suggestion.type} / {suggestedLabel}.
+                  </div>
+                ) : null}
+                {hasResolverKindUpdate ? (
+                  <div className="text-muted-foreground">
+                    Source: current {getAssetGroupResolverKindLabel(existingAssetGroup.resolverKind)}, suggested{' '}
+                    {suggestion.resolverKind ? getAssetGroupResolverKindLabel(suggestion.resolverKind) : 'none'}.
                   </div>
                 ) : null}
                 {hasDecimalsUpdate ? (

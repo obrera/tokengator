@@ -17,6 +17,9 @@ export const assetGroup = sqliteTable(
     imageUrl: text('image_url'),
     indexingStartedAt: integer('indexing_started_at', { mode: 'timestamp_ms' }),
     label: text('label').notNull(),
+    resolverKind: text('resolver_kind', {
+      enum: ['helius-collection-assets', 'helius-token-accounts', 'realms-voters'],
+    }).notNull(),
     symbol: text('symbol'),
     type: text('type', { enum: ['collection', 'mint'] }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
@@ -29,6 +32,7 @@ export const assetGroup = sqliteTable(
     index('asset_group_createdAt_idx').on(table.createdAt),
     index('asset_group_enabled_idx').on(table.enabled),
     index('asset_group_label_idx').on(table.label),
+    index('asset_group_resolverKind_idx').on(table.resolverKind),
     index('asset_group_type_idx').on(table.type),
   ],
 )
@@ -48,7 +52,9 @@ export const assetGroupIndexRun = sqliteTable(
       .primaryKey(),
     insertedCount: integer('inserted_count').default(0).notNull(),
     pagesProcessed: integer('pages_processed').default(0).notNull(),
-    resolverKind: text('resolver_kind', { enum: ['helius-collection-assets', 'helius-token-accounts'] }).notNull(),
+    resolverKind: text('resolver_kind', {
+      enum: ['helius-collection-assets', 'helius-token-accounts', 'realms-voters'],
+    }).notNull(),
     startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
     status: text('status', { enum: ['failed', 'running', 'skipped', 'succeeded'] }).notNull(),
     totalCount: integer('total_count').default(0).notNull(),
@@ -92,7 +98,9 @@ export const asset = sqliteTable(
     page: integer('page').notNull(),
     raw: text('raw'),
     resolverId: text('resolver_id').notNull(),
-    resolverKind: text('resolver_kind', { enum: ['helius-collection-assets', 'helius-token-accounts'] }).notNull(),
+    resolverKind: text('resolver_kind', {
+      enum: ['helius-collection-assets', 'helius-token-accounts', 'realms-voters'],
+    }).notNull(),
   },
   (table) => [
     index('asset_assetGroupId_address_idx').on(table.assetGroupId, table.address),

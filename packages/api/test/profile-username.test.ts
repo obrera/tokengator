@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer'
 
 type AssetSchema = typeof import('@tokengator/db/schema/asset')
 type AuthSchema = typeof import('@tokengator/db/schema/auth')
@@ -101,9 +102,13 @@ function createIndexedAssetId(input: {
   address: string
   assetGroupId: string
   owner: string
-  resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: AssetGroupResolverKind
 }) {
   return `v2:${JSON.stringify([input.assetGroupId, input.address, input.owner, input.resolverKind])}`
+}
+
+function getDefaultAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGroupResolverKind {
+  return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
 }
 
 async function insertAsset(input: {
@@ -115,7 +120,7 @@ async function insertAsset(input: {
   metadataName?: string | null
   metadataSymbol?: string | null
   owner: string
-  resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: AssetGroupResolverKind
   traits?: Array<{ groupId: string; groupLabel: string; value: string; valueLabel: string }>
 }) {
   await database.insert(assetSchema.asset).values({
@@ -168,6 +173,7 @@ async function insertAssetGroup(input: {
   id: string
   imageUrl?: string | null
   label: string
+  resolverKind?: AssetGroupResolverKind
   type: 'collection' | 'mint'
 }) {
   await database.insert(assetSchema.assetGroup).values({
@@ -178,6 +184,7 @@ async function insertAssetGroup(input: {
     imageUrl: input.imageUrl ?? null,
     indexingStartedAt: null,
     label: input.label,
+    resolverKind: input.resolverKind ?? getDefaultAssetGroupResolverKind(input.type),
     type: input.type,
     updatedAt: new Date('2026-04-11T00:00:00.000Z'),
   })
@@ -820,6 +827,7 @@ describe('profile username routes', () => {
       id: 'asset-group-mint',
       imageUrl: 'https://example.com/mint-island.png',
       label: 'Island Token',
+      resolverKind: 'realms-voters',
       type: 'mint',
     })
     await insertCommunityRole({
@@ -945,7 +953,7 @@ describe('profile username routes', () => {
       assetGroupId: 'asset-group-mint',
       id: 'mint-owned-alpha',
       owner: 'wallet-alpha',
-      resolverKind: 'helius-token-accounts',
+      resolverKind: 'realms-voters',
     })
     await insertAsset({
       address: 'mint-island',
@@ -953,7 +961,7 @@ describe('profile username routes', () => {
       assetGroupId: 'asset-group-mint',
       id: 'mint-owned-beta',
       owner: ' wallet-beta ',
-      resolverKind: 'helius-token-accounts',
+      resolverKind: 'realms-voters',
     })
     await insertAsset({
       address: 'mint-island',
@@ -961,7 +969,7 @@ describe('profile username routes', () => {
       assetGroupId: 'asset-group-mint',
       id: 'mint-owned-beta-extra',
       owner: 'wallet-beta',
-      resolverKind: 'helius-token-accounts',
+      resolverKind: 'realms-voters',
     })
     await insertAsset({
       address: 'mint-island',
@@ -969,6 +977,14 @@ describe('profile username routes', () => {
       assetGroupId: 'asset-group-mint',
       id: 'mint-other',
       owner: 'wallet-other',
+      resolverKind: 'realms-voters',
+    })
+    await insertAsset({
+      address: 'mint-island',
+      amount: '100',
+      assetGroupId: 'asset-group-mint',
+      id: 'mint-wrong-resolver',
+      owner: 'wallet-alpha',
       resolverKind: 'helius-token-accounts',
     })
 
@@ -1036,6 +1052,7 @@ describe('profile username routes', () => {
                       ],
                     },
                   ],
+                  resolverKind: 'helius-collection-assets',
                   type: 'collection',
                 },
               ],
@@ -1068,6 +1085,7 @@ describe('profile username routes', () => {
                     },
                   ],
                   ownedAmount: '30',
+                  resolverKind: 'realms-voters',
                   type: 'mint',
                 },
               ],

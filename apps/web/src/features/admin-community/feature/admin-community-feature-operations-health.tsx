@@ -5,6 +5,7 @@ import { UiStatus, type UiStatusVariants } from '@tokengator/ui/components/ui-st
 import { formatDateTime } from '@tokengator/ui/util/format-date-time'
 
 import { getFreshnessTone } from '@/features/admin/util/get-freshness-tone'
+import { getAssetGroupResolverKindShortLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
 import { useAdminCommunityMembershipRunsQuery } from '../data-access/use-admin-community-membership-runs-query'
 import { useAdminCommunitySyncStatusQuery } from '../data-access/use-admin-community-sync-status-query'
 
@@ -109,7 +110,7 @@ export function AdminCommunityFeatureOperationsHealth(props: AdminCommunityFeatu
                     </UiStatus>
                   </div>
                   <div className="text-muted-foreground">
-                    {assetGroup.type} · {assetGroup.address}
+                    {getAssetGroupResolverKindShortLabel(assetGroup.resolverKind)} · {assetGroup.address}
                   </div>
                   <div className="text-muted-foreground">
                     Last success: {formatDateTime(assetGroup.indexingStatus.lastSuccessfulRun?.finishedAt ?? null)}

@@ -14,6 +14,7 @@ import { formatDateTime } from '@tokengator/ui/util/format-date-time'
 
 import type { AdminAssetListSearch } from '@/features/admin-asset/util/admin-asset-list-search'
 import { getFreshnessTone } from '@/features/admin/util/get-freshness-tone'
+import { getAssetGroupResolverKindLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
 import { orpc } from '@/lib/orpc'
 
 import { useAdminAssetDelete } from '../data-access/use-admin-asset-delete'
@@ -180,8 +181,8 @@ export function AdminAssetFeatureGroupAssets(props: AdminAssetFeatureGroupAssets
                   </div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground">Resolver</div>
-                  <div>{run.resolverKind}</div>
+                  <div className="text-muted-foreground">Source</div>
+                  <div>{getAssetGroupResolverKindLabel(run.resolverKind)}</div>
                   {run.errorMessage ? <div className="text-destructive mt-1 text-xs">{run.errorMessage}</div> : null}
                 </div>
               </div>

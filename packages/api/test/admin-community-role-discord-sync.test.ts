@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer'
 
 type AssetSchema = typeof import('@tokengator/db/schema/asset')
 type AuthSchema = typeof import('@tokengator/db/schema/auth')
@@ -80,6 +81,10 @@ let sentDiscordMessages: Array<{
   channelId: string
   content: string
 }> = []
+
+function getDefaultAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGroupResolverKind {
+  return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
+}
 
 function createAdminCallContext(): any {
   return {
@@ -428,7 +433,7 @@ async function insertAsset(input: {
   amount: string
   assetGroupId: string
   owner: string
-  resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: AssetGroupResolverKind
 }) {
   const now = new Date('2026-04-02T12:00:00.000Z')
 
@@ -462,6 +467,7 @@ async function insertAssetGroup(input: {
   enabled?: boolean
   id: string
   label: string
+  resolverKind?: AssetGroupResolverKind
   type: 'collection' | 'mint'
 }) {
   const now = new Date('2026-04-02T12:00:00.000Z')
@@ -473,6 +479,7 @@ async function insertAssetGroup(input: {
     id: input.id,
     indexingStartedAt: null,
     label: input.label,
+    resolverKind: input.resolverKind ?? getDefaultAssetGroupResolverKind(input.type),
     type: input.type,
     updatedAt: now,
   })

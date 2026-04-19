@@ -1,4 +1,11 @@
-import { HELIUS_COLLECTION_ASSETS, HELIUS_TOKEN_ACCOUNTS, type ResolverKind } from '@tokengator/indexer'
+import {
+  createRealmsApiAdapter,
+  HELIUS_COLLECTION_ASSETS,
+  HELIUS_TOKEN_ACCOUNTS,
+  REALMS_PROGRAM_ID,
+  REALMS_VOTERS,
+  type ResolverKind,
+} from '@tokengator/indexer'
 
 import type { AdminAssetGroupEntity } from './admin-asset-group.entity'
 
@@ -25,6 +32,7 @@ export type AdminAssetGroupLookupReason =
   | 'metadata_account_not_mint'
   | 'mint'
   | 'not_found'
+  | 'realm'
   | 'token_account_not_mint'
   | 'unsupported_program'
   | 'unsupported_without_collection'
@@ -289,6 +297,37 @@ async function getSuggestion(input: {
       resolverKind: HELIUS_COLLECTION_ASSETS,
       symbol: null,
       type: 'collection',
+    }
+  }
+
+  if (input.accountInfo.ownerProgram === REALMS_PROGRAM_ID) {
+    try {
+      const realms = createRealmsApiAdapter({
+        fetch: input.fetch,
+      })
+      const realm = await realms.getRealm({
+        realm: input.account,
+      })
+
+      if (!realm) {
+        return unsupportedSuggestion('unsupported_program')
+      }
+
+      return {
+        address: input.account,
+        decimals: 0,
+        imageUrl: null,
+        label: realm.name,
+        reason: 'realm',
+        resolvable: true,
+        resolverKind: REALMS_VOTERS,
+        symbol: null,
+        type: 'mint',
+      }
+    } catch (error) {
+      input.warnings.push(formatLookupWarning(error, 'Realm lookup failed.'))
+
+      return unsupportedSuggestion('unsupported_program')
     }
   }
 

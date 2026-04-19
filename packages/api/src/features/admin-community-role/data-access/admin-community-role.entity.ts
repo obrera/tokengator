@@ -2,6 +2,7 @@ import type {
   DiscordGuildRoleInspectionDiagnostics,
   DiscordGuildRoleRecord,
 } from '@tokengator/discord/inspect-discord-guild-roles'
+import type { ResolverKind } from '@tokengator/indexer'
 import type {
   CommunityDiscordSyncRunRecord,
   CommunityMembershipSyncRunRecord,
@@ -16,6 +17,7 @@ export type AdminCommunityRoleConditionEntity = {
   assetGroupEnabled: boolean
   assetGroupId: string
   assetGroupLabel: string
+  assetGroupResolverKind: ResolverKind
   assetGroupType: 'collection' | 'mint'
   id: string
   maximumAmount: string | null

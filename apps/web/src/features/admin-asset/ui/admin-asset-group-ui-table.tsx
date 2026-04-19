@@ -13,6 +13,7 @@ import {
 import { formatDateTime } from '@tokengator/ui/util/format-date-time'
 
 import { getFreshnessTone } from '@/features/admin/util/get-freshness-tone'
+import { getAssetGroupResolverKindLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
 
 interface AdminAssetGroupUiTableProps {
   assetGroups: AdminAssetGroupWithIndexingStatus[]
@@ -66,6 +67,7 @@ export function AdminAssetGroupUiTable(props: AdminAssetGroupUiTableProps) {
         <UiTableRow>
           <UiTableHeaderCell>Image</UiTableHeaderCell>
           <UiTableHeaderCell>Label</UiTableHeaderCell>
+          <UiTableHeaderCell>Source</UiTableHeaderCell>
           <UiTableHeaderCell>Type</UiTableHeaderCell>
           <UiTableHeaderCell>Address</UiTableHeaderCell>
           <UiTableHeaderCell>Index Health</UiTableHeaderCell>
@@ -82,6 +84,7 @@ export function AdminAssetGroupUiTable(props: AdminAssetGroupUiTableProps) {
             <UiTableCell className="font-medium">
               {renderLabel ? renderLabel(assetGroup) : <AdminAssetGroupUiLabel assetGroup={assetGroup} />}
             </UiTableCell>
+            <UiTableCell>{getAssetGroupResolverKindLabel(assetGroup.resolverKind)}</UiTableCell>
             <UiTableCell>{assetGroup.type}</UiTableCell>
             <UiTableCell className="font-mono text-xs">{assetGroup.address}</UiTableCell>
             <UiTableCell>

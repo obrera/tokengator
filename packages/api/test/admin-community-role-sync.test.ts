@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer'
 
 type AssetSchema = typeof import('@tokengator/db/schema/asset')
 type AuthSchema = typeof import('@tokengator/db/schema/auth')
@@ -39,8 +40,13 @@ let listOrganizationsDueForScheduledCommunityMembershipSync: ListOrganizationsDu
 let previewCommunityRoleSync: PreviewCommunityRoleSync
 let removeCommunityRoleById: RemoveCommunityRoleById
 let runScheduledCommunityRoleSync: RunScheduledCommunityRoleSync
+
 function decodeOutput(buffer: Uint8Array | undefined) {
   return buffer ? Buffer.from(buffer).toString('utf8').trim() : ''
+}
+
+function getAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGroupResolverKind {
+  return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
 }
 
 function syncDatabase(databaseUrl: string) {
@@ -102,7 +108,7 @@ async function insertAsset(input: {
   amount: string
   assetGroupId: string
   owner: string
-  resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: AssetGroupResolverKind
 }) {
   const now = new Date('2026-04-02T12:00:00.000Z')
 
@@ -147,6 +153,7 @@ async function insertAssetGroup(input: {
     id: input.id,
     indexingStartedAt: null,
     label: input.label,
+    resolverKind: getAssetGroupResolverKind(input.type),
     type: input.type,
     updatedAt: now,
   })
@@ -357,6 +364,7 @@ describe('evaluateCommunityRoles', () => {
               assetGroupEnabled: true,
               assetGroupId: 'group-a',
               assetGroupLabel: 'Group A',
+              assetGroupResolverKind: 'helius-collection-assets',
               assetGroupType: 'collection',
               id: 'condition-a',
               maximumAmount: null,
@@ -382,6 +390,7 @@ describe('evaluateCommunityRoles', () => {
               assetGroupEnabled: true,
               assetGroupId: 'group-a',
               assetGroupLabel: 'Group A',
+              assetGroupResolverKind: 'helius-collection-assets',
               assetGroupType: 'collection',
               id: 'condition-b',
               maximumAmount: null,
@@ -392,6 +401,7 @@ describe('evaluateCommunityRoles', () => {
               assetGroupEnabled: true,
               assetGroupId: 'group-b',
               assetGroupLabel: 'Group B',
+              assetGroupResolverKind: 'helius-token-accounts',
               assetGroupType: 'mint',
               id: 'condition-c',
               maximumAmount: null,
@@ -458,6 +468,7 @@ describe('evaluateCommunityRoles', () => {
               assetGroupEnabled: false,
               assetGroupId: 'group-a',
               assetGroupLabel: 'Group A',
+              assetGroupResolverKind: 'helius-collection-assets',
               assetGroupType: 'collection',
               id: 'condition-a',
               maximumAmount: '1',
@@ -483,6 +494,7 @@ describe('evaluateCommunityRoles', () => {
               assetGroupEnabled: true,
               assetGroupId: 'group-a',
               assetGroupLabel: 'Group A',
+              assetGroupResolverKind: 'helius-collection-assets',
               assetGroupType: 'collection',
               id: 'condition-b',
               maximumAmount: null,
@@ -526,6 +538,7 @@ describe('evaluateCommunityRoles', () => {
               assetGroupEnabled: true,
               assetGroupId: 'perk',
               assetGroupLabel: 'PERK',
+              assetGroupResolverKind: 'helius-collection-assets',
               assetGroupType: 'collection',
               id: 'condition-shrimp',
               maximumAmount: '1',
@@ -551,6 +564,7 @@ describe('evaluateCommunityRoles', () => {
               assetGroupEnabled: true,
               assetGroupId: 'perk',
               assetGroupLabel: 'PERK',
+              assetGroupResolverKind: 'helius-collection-assets',
               assetGroupType: 'collection',
               id: 'condition-shark',
               maximumAmount: '9',
@@ -576,6 +590,7 @@ describe('evaluateCommunityRoles', () => {
               assetGroupEnabled: true,
               assetGroupId: 'perk',
               assetGroupLabel: 'PERK',
+              assetGroupResolverKind: 'helius-collection-assets',
               assetGroupType: 'collection',
               id: 'condition-whale',
               maximumAmount: null,

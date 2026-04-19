@@ -24,7 +24,7 @@ export function AdminAssetGroupUiFilters(props: AdminAssetGroupUiFiltersProps) {
         <Input
           id="asset-group-search"
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search label, type, or address"
+          placeholder="Search label, type, source, or address"
           value={search}
         />
       </div>

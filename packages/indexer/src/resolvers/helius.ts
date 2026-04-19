@@ -3,6 +3,7 @@ import { getAppLogger } from '@tokengator/logger'
 import type { ResolverContext, ResolverResult } from '../types'
 import { ProviderError } from '../errors'
 import { defineResolver, type ResolverDefinition } from '../resolver'
+import { HELIUS_COLLECTION_ASSETS, HELIUS_TOKEN_ACCOUNTS } from '../resolver-kind'
 
 export interface HeliusAdapter {
   getAssetsByCollection(input: {
@@ -29,11 +30,6 @@ export interface HeliusTokenAccountsConfig {
   limit?: number
   mint: string
 }
-
-export const HELIUS_COLLECTION_ASSETS = 'helius-collection-assets'
-export const HELIUS_TOKEN_ACCOUNTS = 'helius-token-accounts'
-export const RESOLVER_KINDS = [HELIUS_COLLECTION_ASSETS, HELIUS_TOKEN_ACCOUNTS] as const
-export type ResolverKind = (typeof RESOLVER_KINDS)[number]
 
 const DEFAULT_PAGE_LIMIT = 1000
 const logger = getAppLogger('indexer', 'helius-resolver')

@@ -28,7 +28,7 @@ import {
   removeDiscordGuildMemberRole,
 } from '@tokengator/discord'
 import { env } from '@tokengator/env/api'
-import { normalizeAmountToBigInt } from '@tokengator/indexer'
+import { normalizeAmountToBigInt, type ResolverKind } from '@tokengator/indexer'
 
 import {
   AUTOMATION_LOCK_TIMEOUT_MS,
@@ -73,6 +73,7 @@ type CommunityRoleConditionRecord = {
   assetGroupEnabled: boolean
   assetGroupId: string
   assetGroupLabel: string
+  assetGroupResolverKind: ResolverKind
   assetGroupType: 'collection' | 'mint'
   id: string
   maximumAmount: string | null
@@ -311,6 +312,7 @@ export type OrganizationSyncDependencyAssetGroup = {
   id: string
   indexingStatus: AssetGroupIndexStatusSummary
   label: string
+  resolverKind: ResolverKind
   type: 'collection' | 'mint'
 }
 
@@ -513,6 +515,7 @@ export async function listCommunityRoleRecords(
         assetGroupEnabled: assetGroup.enabled,
         assetGroupId: communityRoleCondition.assetGroupId,
         assetGroupLabel: assetGroup.label,
+        assetGroupResolverKind: assetGroup.resolverKind,
         assetGroupType: assetGroup.type,
         communityRoleId: communityRoleCondition.communityRoleId,
         id: communityRoleCondition.id,
@@ -549,6 +552,7 @@ export async function listCommunityRoleRecords(
         assetGroupEnabled: condition.assetGroupEnabled,
         assetGroupId: condition.assetGroupId,
         assetGroupLabel: condition.assetGroupLabel,
+        assetGroupResolverKind: condition.assetGroupResolverKind,
         assetGroupType: condition.assetGroupType,
         id: condition.id,
         maximumAmount: condition.maximumAmount,
@@ -1617,6 +1621,7 @@ function getDependencyAssetGroupRecords(roles: CommunityRoleRecord[]) {
                 enabled: condition.assetGroupEnabled,
                 id: condition.assetGroupId,
                 label: condition.assetGroupLabel,
+                resolverKind: condition.assetGroupResolverKind,
                 type: condition.assetGroupType,
               },
             ] as const,

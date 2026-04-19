@@ -4,6 +4,11 @@ import { assetGroup } from '@tokengator/db/schema/asset'
 
 import type { AdminAssetGroupUpdateInput } from './admin-asset-group-update-input'
 import type { AdminAssetGroupEntity } from './admin-asset-group.entity'
+import {
+  getDefaultAdminAssetGroupResolverKind,
+  isAdminAssetGroupResolverKindCompatible,
+  normalizeAdminAssetGroupResolverKind,
+} from './admin-asset-group-resolver-kind'
 
 function normalizeOptionalDecimals(value: number | undefined) {
   return typeof value === 'number' ? value : 0
@@ -27,6 +32,18 @@ export async function adminAssetGroupUpdate(input: {
     input.data.imageUrl === undefined ? input.existingAssetGroup.imageUrl : normalizeOptionalString(input.data.imageUrl)
   const symbol =
     input.data.symbol === undefined ? input.existingAssetGroup.symbol : normalizeOptionalString(input.data.symbol)
+  const resolverKind =
+    input.data.resolverKind === undefined
+      ? isAdminAssetGroupResolverKindCompatible({
+          resolverKind: input.existingAssetGroup.resolverKind,
+          type: input.data.type,
+        })
+        ? input.existingAssetGroup.resolverKind
+        : getDefaultAdminAssetGroupResolverKind(input.data.type)
+      : normalizeAdminAssetGroupResolverKind({
+          resolverKind: input.data.resolverKind,
+          type: input.data.type,
+        })
 
   await db
     .update(assetGroup)
@@ -36,6 +53,7 @@ export async function adminAssetGroupUpdate(input: {
       enabled: input.data.enabled,
       imageUrl,
       label: input.data.label,
+      resolverKind,
       symbol,
       type: input.data.type,
       updatedAt,
@@ -49,6 +67,7 @@ export async function adminAssetGroupUpdate(input: {
     enabled: input.data.enabled,
     imageUrl,
     label: input.data.label,
+    resolverKind,
     symbol,
     type: input.data.type,
     updatedAt,

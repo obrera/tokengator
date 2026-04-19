@@ -36,24 +36,26 @@ const viewerCommunities = {
                   ],
                 },
               ],
+              resolverKind: 'helius-collection-assets',
               type: 'collection',
             },
             {
-              address: 'mint-island',
+              address: 'realm-island',
               id: 'asset-group-mint',
               imageUrl: null,
-              label: 'Island Token',
+              label: 'Council Power',
               maximumAmount: null,
               minimumAmount: '1',
               ownedAccounts: [
                 {
-                  address: 'mint-island',
+                  address: 'realm-island',
                   amount: '25',
                   id: 'mint-owned-alpha',
                   owner: 'wallet-alpha',
                 },
               ],
               ownedAmount: '25',
+              resolverKind: 'realms-voters',
               type: 'mint',
             },
           ],
@@ -161,7 +163,8 @@ describe('ProfileFeatureAssets', () => {
     expect(markup).toContain('href="/communities/alpha-dao/collections/collection-alpha?grid=8"')
     expect(markup).toContain('PEARK #100')
     expect(markup).toContain('Background: Forest')
-    expect(markup).toContain('Island Token')
+    expect(markup).toContain('Council Power')
+    expect(markup).toContain('Realms: Council Power')
     expect(markup).toContain('Raw total amount')
     expect(markup).toContain('25')
     expect(markup).toContain('Wallet holding 1')
@@ -191,7 +194,8 @@ describe('ProfileFeatureAssets', () => {
     expect(markup).toContain('href="/communities/alpha-dao/collections/collection-alpha?grid=8"')
     expect(markup).toContain('PEARK #100')
     expect(markup).toContain('Background: Forest')
-    expect(markup).toContain('Island Token')
+    expect(markup).toContain('Council Power')
+    expect(markup).toContain('Realms: Council Power')
     expect(markup).toContain('Raw total amount')
     expect(markup).toContain('25')
     expect(markup).toContain('Wallet holding 1')

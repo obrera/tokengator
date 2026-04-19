@@ -1,4 +1,5 @@
 import type { IdentityProvider } from '@tokengator/db/schema/auth'
+import type { ResolverKind } from '@tokengator/indexer'
 import type { OrganizationMembershipEntity } from '../../organization'
 import { profileSolanaWalletAddressEllipsify } from '../util/profile-solana-wallet-address-ellipsify'
 import { profileSolanaWalletNameNormalize } from '../util/profile-solana-wallet-name-normalize'
@@ -29,6 +30,7 @@ export type ProfileCommunityAssetRoleCollectionGroupEntity = {
   maximumAmount: string | null
   minimumAmount: string
   ownedAssets: ProfileCommunityCollectionAssetEntity[]
+  resolverKind: ResolverKind
   type: 'collection'
 }
 
@@ -48,6 +50,7 @@ export type ProfileCommunityAssetRoleMintGroupEntity = {
   minimumAmount: string
   ownedAccounts: ProfileCommunityMintAccountEntity[]
   ownedAmount: string
+  resolverKind: ResolverKind
   type: 'mint'
 }
 

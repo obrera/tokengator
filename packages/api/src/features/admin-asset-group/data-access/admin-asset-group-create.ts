@@ -3,6 +3,7 @@ import { assetGroup } from '@tokengator/db/schema/asset'
 
 import type { AdminAssetGroupCreateInput } from './admin-asset-group-create-input'
 import { adminAssetGroupGet } from './admin-asset-group-get'
+import { normalizeAdminAssetGroupResolverKind } from './admin-asset-group-resolver-kind'
 
 function normalizeOptionalDecimals(value: number | undefined) {
   return typeof value === 'number' ? value : 0
@@ -15,6 +16,10 @@ function normalizeOptionalString(value: string | null | undefined) {
 export async function adminAssetGroupCreate(input: AdminAssetGroupCreateInput) {
   const id = crypto.randomUUID()
   const now = new Date()
+  const resolverKind = normalizeAdminAssetGroupResolverKind({
+    resolverKind: input.resolverKind,
+    type: input.type,
+  })
 
   await db.insert(assetGroup).values({
     address: input.address,
@@ -24,6 +29,7 @@ export async function adminAssetGroupCreate(input: AdminAssetGroupCreateInput) {
     id,
     imageUrl: normalizeOptionalString(input.imageUrl),
     label: input.label,
+    resolverKind,
     symbol: normalizeOptionalString(input.symbol),
     type: input.type,
     updatedAt: now,

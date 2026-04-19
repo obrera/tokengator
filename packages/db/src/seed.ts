@@ -26,6 +26,7 @@ const devSeedAssetGroups = [
     enabled: true,
     imageUrl: 'https://gateway.irys.xyz/8GYvKSGCV5NXNViixqLTyb2Y8cQqSTqGoPEQU56uifFy',
     label: 'PERK',
+    resolverKind: 'helius-collection-assets',
     type: 'collection',
   },
   {
@@ -33,6 +34,7 @@ const devSeedAssetGroups = [
     enabled: true,
     imageUrl: 'https://ipfs.io/ipfs/Qmd9aU8WuzDqfsGkz82KAZeNLRwnRGzL4fih4aZ3tQ6ZUv',
     label: 'STORE',
+    resolverKind: 'helius-token-accounts',
     type: 'mint',
   },
 ] as const
@@ -260,6 +262,7 @@ async function createSeedAssetGroups(db: RuntimeModules['db']) {
         id,
         imageUrl: assetGroup.imageUrl,
         label: assetGroup.label,
+        resolverKind: assetGroup.resolverKind,
         type: assetGroup.type,
       }
     }),

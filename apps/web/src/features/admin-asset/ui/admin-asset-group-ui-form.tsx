@@ -1,12 +1,18 @@
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { AdminAssetGroupUpdateInput } from '@tokengator/sdk'
+import type { AdminAssetGroupResolverKind as ResolverKind, AdminAssetGroupUpdateInput } from '@tokengator/sdk'
 import { Button } from '@tokengator/ui/components/button'
 import { Checkbox } from '@tokengator/ui/components/checkbox'
 import { Input } from '@tokengator/ui/components/input'
 import { Label } from '@tokengator/ui/components/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tokengator/ui/components/select'
 
+import {
+  getAssetGroupResolverKindLabel,
+  getDefaultAssetGroupResolverKind,
+  getSupportedAssetGroupResolverKinds,
+  isAssetGroupResolverKindCompatible,
+} from '@/features/asset-group/util/asset-group-resolver-kind'
 import { ellipsifyAddress } from '../util/ellipsify-address'
 
 interface AdminAssetGroupUiFormProps {
@@ -17,15 +23,43 @@ interface AdminAssetGroupUiFormProps {
   submitLabel: string
 }
 
+type NormalizedAdminAssetGroupFormValues = AdminAssetGroupUpdateInput['data'] & {
+  resolverKind: ResolverKind
+}
+
+function normalizeAdminAssetGroupFormValues(
+  values: AdminAssetGroupUpdateInput['data'],
+): NormalizedAdminAssetGroupFormValues {
+  const resolverKind =
+    values.resolverKind &&
+    isAssetGroupResolverKindCompatible({
+      resolverKind: values.resolverKind as ResolverKind,
+      type: values.type,
+    })
+      ? values.resolverKind
+      : getDefaultAssetGroupResolverKind(values.type)
+
+  return {
+    ...values,
+    resolverKind,
+  }
+}
+
 export function AdminAssetGroupUiForm(props: AdminAssetGroupUiFormProps) {
   const { initialValues, isPending, onSubmit, showEnabled = true, submitLabel } = props
-  const [values, setValues] = useState(initialValues)
+  const [values, setValues] = useState(() => normalizeAdminAssetGroupFormValues(initialValues))
   const [decimalsInputValue, setDecimalsInputValue] = useState(() => String(initialValues.decimals))
   const fallbackLabel = ellipsifyAddress(values.address)
+  const resolverKindItems = getSupportedAssetGroupResolverKinds(values.type).map((resolverKind) => ({
+    label: getAssetGroupResolverKindLabel(resolverKind),
+    value: resolverKind,
+  }))
 
   useEffect(() => {
-    setValues(initialValues)
-    setDecimalsInputValue(String(initialValues.decimals))
+    const nextValues = normalizeAdminAssetGroupFormValues(initialValues)
+
+    setValues(nextValues)
+    setDecimalsInputValue(String(nextValues.decimals))
   }, [initialValues])
 
   return (
@@ -53,10 +87,21 @@ export function AdminAssetGroupUiForm(props: AdminAssetGroupUiFormProps) {
               return
             }
 
-            setValues((currentValues) => ({
-              ...currentValues,
-              type: value as AdminAssetGroupUpdateInput['data']['type'],
-            }))
+            setValues((currentValues) => {
+              const nextType = value as AdminAssetGroupUpdateInput['data']['type']
+              const nextResolverKind = isAssetGroupResolverKindCompatible({
+                resolverKind: currentValues.resolverKind as ResolverKind,
+                type: nextType,
+              })
+                ? currentValues.resolverKind
+                : getDefaultAssetGroupResolverKind(nextType)
+
+              return {
+                ...currentValues,
+                resolverKind: nextResolverKind,
+                type: nextType,
+              }
+            })
           }}
           value={values.type}
         >
@@ -83,10 +128,43 @@ export function AdminAssetGroupUiForm(props: AdminAssetGroupUiFormProps) {
                   : currentValues.label,
             }))
           }
-          placeholder="Collection or mint address"
+          placeholder="Collection, mint, or realm address"
           required
           value={values.address}
         />
+      </div>
+      <div className="grid gap-1.5">
+        <Label id="asset-group-resolver-kind-label">Source</Label>
+        <Select
+          disabled={isPending || values.type === 'collection'}
+          items={resolverKindItems}
+          onValueChange={(value) => {
+            if (value === null) {
+              return
+            }
+
+            setValues((currentValues) => ({
+              ...currentValues,
+              resolverKind: value as ResolverKind,
+            }))
+          }}
+          value={values.resolverKind}
+        >
+          <SelectTrigger
+            aria-labelledby="asset-group-resolver-kind-label"
+            className="w-full"
+            id="asset-group-resolver-kind"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {resolverKindItems.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid gap-1.5">
         <Label htmlFor="asset-group-decimals">Decimals</Label>

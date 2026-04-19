@@ -14,7 +14,7 @@
     "db:generate": "drizzle-kit generate",
     "db:local": "turso dev --db-file local.db",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
+    "db:push": "bun run ./src/push.ts",
     "db:seed": "bun run ./src/seed.ts",
     "db:studio": "drizzle-kit studio",
     "test": "bun test ./test",

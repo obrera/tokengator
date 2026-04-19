@@ -5,6 +5,8 @@ import { Button } from '@tokengator/ui/components/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 import { UiStatus, type UiStatusVariants } from '@tokengator/ui/components/ui-status'
 
+import { getAssetGroupResolverKindShortLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
+
 interface AdminCommunityRoleUiCardProps {
   conditions: AdminCommunityRoleConditionEntity[]
   discordMappingLabel: string
@@ -78,7 +80,7 @@ export function AdminCommunityRoleUiCard(props: AdminCommunityRoleUiCardProps) {
             <div className="rounded-lg border p-3" key={condition.id}>
               <div className="font-medium">{condition.assetGroupLabel}</div>
               <div className="text-muted-foreground">
-                {condition.assetGroupType} · {condition.assetGroupAddress}
+                {getAssetGroupResolverKindShortLabel(condition.assetGroupResolverKind)} · {condition.assetGroupAddress}
               </div>
               <div>
                 Amount range: {condition.minimumAmount}

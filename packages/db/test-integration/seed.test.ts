@@ -217,6 +217,7 @@ describe('seedDatabase', () => {
         enabled: assetSchema.assetGroup.enabled,
         imageUrl: assetSchema.assetGroup.imageUrl,
         label: assetSchema.assetGroup.label,
+        resolverKind: assetSchema.assetGroup.resolverKind,
         type: assetSchema.assetGroup.type,
       })
       .from(assetSchema.assetGroup)

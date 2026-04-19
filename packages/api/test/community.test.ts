@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer'
 
 type AssetSchema = typeof import('@tokengator/db/schema/asset')
 type AuthSchema = typeof import('@tokengator/db/schema/auth')
@@ -89,6 +90,10 @@ function decodeOutput(buffer: Uint8Array | undefined) {
   return buffer ? Buffer.from(buffer).toString('utf8').trim() : ''
 }
 
+function getAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGroupResolverKind {
+  return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
+}
+
 async function expectORPCError(
   promise: Promise<unknown>,
   expected: {
@@ -129,6 +134,7 @@ async function insertAssetGroup(input: {
     imageUrl: input.imageUrl ?? null,
     indexingStartedAt: null,
     label: input.label,
+    resolverKind: getAssetGroupResolverKind(input.type),
     type: input.type,
     updatedAt: new Date('2026-04-11T00:00:00.000Z'),
   })

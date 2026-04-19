@@ -17,7 +17,7 @@ export interface ProviderErrorMetadata {
 
 export type ProviderErrorCode = 'http_429' | 'http_5xx' | 'invalid_response' | 'network_error' | 'provider_error'
 
-export type ProviderName = 'helius'
+export type ProviderName = 'helius' | 'realms'
 
 export class ProviderError extends Error {
   public readonly code: ProviderErrorCode

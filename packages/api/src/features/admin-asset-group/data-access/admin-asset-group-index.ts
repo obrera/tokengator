@@ -10,6 +10,7 @@ export async function adminAssetGroupIndex(input: { assetGroup: AdminAssetGroupE
     assetGroup: {
       address: input.assetGroup.address,
       id: input.assetGroup.id,
+      resolverKind: input.assetGroup.resolverKind,
       type: input.assetGroup.type,
     },
     heliusCluster: env.HELIUS_CLUSTER,

@@ -7,6 +7,7 @@ import type {
   ProfileCommunityMintAccountEntity,
 } from '@tokengator/sdk'
 
+import { getAssetGroupResolverKindShortLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
 import { CommunityUiAvatar } from '@/features/community/ui/community-ui-avatar'
 
 import { Badge } from '@tokengator/ui/components/badge'
@@ -134,7 +135,7 @@ function ProfileUiCommunityRoleAssetGroup({
       )}
       <div className="min-w-0">
         <div className="truncate font-medium">
-          {assetGroup.type === 'collection' ? 'Collection' : 'Mint'}: {assetGroup.label}
+          {getAssetGroupResolverKindShortLabel(assetGroup.resolverKind)}: {assetGroup.label}
         </div>
         <div className="text-muted-foreground truncate font-mono text-[0.7rem]">{assetGroup.address}</div>
       </div>

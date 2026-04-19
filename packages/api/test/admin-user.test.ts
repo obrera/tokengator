@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer'
 
 type AdminUserRouter = typeof import('../src/features/admin-user/feature/admin-user-router').adminUserRouter
 type AssetSchema = typeof import('@tokengator/db/schema/asset')
@@ -79,9 +80,13 @@ function createIndexedAssetId(input: {
   address: string
   assetGroupId: string
   owner: string
-  resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: AssetGroupResolverKind
 }) {
   return `v2:${JSON.stringify([input.assetGroupId, input.address, input.owner, input.resolverKind])}`
+}
+
+function getAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGroupResolverKind {
+  return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
 }
 
 function decodeOutput(buffer: Uint8Array | undefined) {
@@ -130,7 +135,7 @@ async function insertAsset(input: {
   indexedAt?: Date
   metadataName?: string | null
   owner: string
-  resolverKind: 'helius-collection-assets' | 'helius-token-accounts'
+  resolverKind: AssetGroupResolverKind
 }) {
   const indexedAt = input.indexedAt ?? new Date('2026-04-11T00:00:00.000Z')
 
@@ -172,6 +177,7 @@ async function insertAssetGroup(input: { address: string; id: string; label: str
     id: input.id,
     indexingStartedAt: null,
     label: input.label,
+    resolverKind: getAssetGroupResolverKind(input.type),
     type: input.type,
     updatedAt: new Date('2026-04-11T00:00:00.000Z'),
   })
