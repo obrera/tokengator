@@ -9,6 +9,11 @@ const devTabs = [
     value: 'api',
   },
   {
+    label: 'Backup',
+    to: '/dev/backup',
+    value: 'backup',
+  },
+  {
     label: 'Shadcn',
     to: '/dev/shadcn',
     value: 'shadcn',
