@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export function createEnvBooleanSchema(defaultValue: boolean) {
+export function createEnvBooleanSchema(defaultValue = true) {
   return z
     .string()
     .optional()

@@ -9,19 +9,17 @@ dotenv.config({
   quiet: true,
 })
 
-const envBooleanSchema = createEnvBooleanSchema(true)
-
 export const env = createEnv({
   emptyStringAsUndefined: true,
   runtimeEnv: process.env,
   server: {
     API_URL: z.url(),
-    DISCORD_BOT_START: envBooleanSchema,
+    DISCORD_BOT_START: createEnvBooleanSchema(),
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     DISCORD_CLIENT_ID: z.string().min(1).optional(),
     DISCORD_GUILD_ID: z.string().min(1).optional(),
     LOG_DEBUG_CATEGORIES: logDebugCategoriesSchema,
-    LOG_JSON: envBooleanSchema,
+    LOG_JSON: createEnvBooleanSchema(),
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     WEB_URL: z.url().optional(),
   },

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { APP_DEBUG_CATEGORY_VALUES } from '@tokengator/logger/debug-categories'
 
-import { parseStringList } from '../src/lib/server-env-list'
+import { parseEnvStringList } from '../src/lib/server-env-list'
 
 const API_ENV_KEYS = [
   'API_PORT',
@@ -80,21 +80,21 @@ function withApiEnv(overrides: Partial<Record<(typeof API_ENV_KEYS)[number], str
   }
 }
 
-describe('parseStringList', () => {
+describe('parseEnvStringList', () => {
   test('returns an empty list when SOLANA_ADMIN_ADDRESSES is unset', () => {
-    expect(parseStringList()).toEqual([])
+    expect(parseEnvStringList()).toEqual([])
   })
 
   test('trims, dedupes, sorts, and preserves case for SOLANA_ADMIN_ADDRESSES', () => {
     expect(
-      parseStringList(
+      parseEnvStringList(
         '  vote111111111111111111111111111111111111111, So11111111111111111111111111111111111111112, vote111111111111111111111111111111111111111  ',
       ),
     ).toEqual(['So11111111111111111111111111111111111111112', 'vote111111111111111111111111111111111111111'])
   })
 
   test('trims, dedupes, and sorts LOG_DEBUG_CATEGORIES values', () => {
-    expect(parseStringList('  indexer, asset-index, indexer  ')).toEqual(['asset-index', 'indexer'])
+    expect(parseEnvStringList('  indexer, asset-index, indexer  ')).toEqual(['asset-index', 'indexer'])
   })
 })
 

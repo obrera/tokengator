@@ -3,14 +3,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
-
-const allowedHosts =
-  process.env.VITE_SERVER_ALLOWED_HOSTS?.split(',')
-    .map((value) => value.trim())
-    .filter(Boolean) ?? []
-const host = process.env.VITE_SERVER_HOST?.trim().toLowerCase() === 'true' ? true : undefined
-const port = Number(process.env.VITE_SERVER_PORT ?? 3001)
-const target = process.env.API_URL ?? 'http://localhost:3000'
+import { env } from '@tokengator/env/web-server'
 
 export default defineConfig({
   build: {
@@ -18,12 +11,12 @@ export default defineConfig({
   },
   plugins: [tsconfigPaths(), tailwindcss(), tanstackStart(), viteReact()],
   server: {
-    allowedHosts,
-    host,
-    port,
+    allowedHosts: env.VITE_SERVER_ALLOWED_HOSTS,
+    host: env.VITE_SERVER_HOST,
+    port: env.VITE_SERVER_PORT,
     proxy: {
-      '/api': { changeOrigin: true, target },
-      '/rpc': { changeOrigin: true, target },
+      '/api': { changeOrigin: true, target: env.API_URL },
+      '/rpc': { changeOrigin: true, target: env.API_URL },
     },
   },
 })
