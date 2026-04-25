@@ -41,6 +41,7 @@
   "type": "module",
   "scripts": {
     "build": "turbo build",
+    "changeset": "changeset",
     "check-types": "turbo check-types",
     "ci": "bun run lint && turbo run build check-types test test:e2e test:integration",
     "db:generate": "bun run --cwd packages/db db:generate",
@@ -59,12 +60,14 @@
     "lint": "oxlint && oxfmt --check",
     "lint:fix": "oxlint --fix && oxfmt --write",
     "prestart:api": "bun run build && bun db:push",
+    "release": "changeset publish",
     "ruler:apply": "bun x ruler apply --local-only",
     "setup": "bun run ./scripts/setup.ts",
     "start:api": "bun --bun run --cwd apps/api start",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
-    "test:integration": "turbo run test:integration"
+    "test:integration": "turbo run test:integration",
+    "version": "changeset version"
   },
   "dependencies": {
     "@tokengator/env": "workspace:*",
@@ -72,6 +75,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@changesets/cli": "2.30.0",
     "@tokengator/config": "workspace:*",
     "@types/bun": "catalog:",
     "eslint-plugin-perfectionist": "^5.7.0",
