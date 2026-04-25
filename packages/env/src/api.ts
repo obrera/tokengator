@@ -35,13 +35,18 @@ const solanaAdminAddressesSchema = z
 const envBooleanSchema = createEnvBooleanSchema(true)
 
 const heliusClusterSchema = z.enum(['devnet', 'mainnet'])
+const portSchema = z.coerce.number().int().min(1).max(65_535).default(3000)
 const positiveIntegerSchema = z.coerce.number().int().positive()
 const solanaClusterSchema = z.enum(['devnet', 'localnet', 'mainnet', 'testnet'])
 
 export const env = createEnv({
   emptyStringAsUndefined: true,
-  runtimeEnv: process.env,
+  runtimeEnv: {
+    ...process.env,
+    API_PORT: process.env.API_PORT ?? process.env.PORT,
+  },
   server: {
+    API_PORT: portSchema,
     API_URL: z.url(),
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_SOLANA_SIGN_IN_ENABLED: envBooleanSchema,

@@ -4,6 +4,7 @@ import { APP_DEBUG_CATEGORY_VALUES } from '@tokengator/logger/debug-categories'
 import { parseStringList } from '../src/lib/server-env-list'
 
 const API_ENV_KEYS = [
+  'API_PORT',
   'API_URL',
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_SOLANA_SIGN_IN_ENABLED',
@@ -21,6 +22,7 @@ const API_ENV_KEYS = [
   'LOG_DEBUG_CATEGORIES',
   'LOG_JSON',
   'NODE_ENV',
+  'PORT',
   'SCHEDULER_START',
   'SOLANA_ADMIN_ADDRESSES',
   'SOLANA_CLUSTER',
@@ -97,6 +99,66 @@ describe('parseStringList', () => {
 })
 
 describe('env', () => {
+  test('defaults API_PORT to 3000 when API_PORT and PORT are unset', async () => {
+    const restoreEnv = withApiEnv({
+      API_PORT: undefined,
+      PORT: undefined,
+    })
+
+    try {
+      const { env } = await import(`../src/api.ts?test=${Date.now()}-api-port-default`)
+
+      expect(env.API_PORT).toBe(3000)
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('falls back to PORT when API_PORT is unset', async () => {
+    const restoreEnv = withApiEnv({
+      API_PORT: undefined,
+      PORT: '4100',
+    })
+
+    try {
+      const { env } = await import(`../src/api.ts?test=${Date.now()}-api-port-fallback`)
+
+      expect(env.API_PORT).toBe(4100)
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('prefers API_PORT when it is set', async () => {
+    const restoreEnv = withApiEnv({
+      API_PORT: '4200',
+      PORT: '4100',
+    })
+
+    try {
+      const { env } = await import(`../src/api.ts?test=${Date.now()}-api-port-preferred`)
+
+      expect(env.API_PORT).toBe(4200)
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('rejects API_PORT outside the valid port range', async () => {
+    const restoreEnv = withApiEnv({
+      API_PORT: '65536',
+      PORT: undefined,
+    })
+
+    try {
+      await expect(import(`../src/api.ts?test=${Date.now()}-api-port-invalid`)).rejects.toThrow(
+        'Invalid environment variables',
+      )
+    } finally {
+      restoreEnv()
+    }
+  })
+
   test('defaults DISCORD_BOT_START to true when unset', async () => {
     const restoreEnv = withApiEnv({
       DISCORD_BOT_START: undefined,
