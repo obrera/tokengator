@@ -1,0 +1,62 @@
+name: Publish pkg.pr.new
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: bun run build
+
+      - name: Discover publishable packages
+        id: packages
+        shell: bash
+        run: |
+          packages="$(
+            bun -e "
+              import { existsSync, readdirSync, readFileSync } from 'node:fs'
+              import { join } from 'node:path'
+
+              const packages = readdirSync('packages', { withFileTypes: true })
+                .filter((entry) => entry.isDirectory())
+                .map((entry) => join('packages', entry.name))
+                .filter((directory) => {
+                  const manifest = join(directory, 'package.json')
+
+                  if (!existsSync(manifest)) {
+                    return false
+                  }
+
+                  const packageJson = JSON.parse(readFileSync(manifest, 'utf8'))
+
+                  return packageJson.private !== true
+                })
+                .sort()
+
+              console.log(packages.join(' '))
+            "
+          )"
+
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          echo "$packages"
+
+      - name: Publish to pkg.pr.new
+        if: steps.packages.outputs.packages != ''
+        env:
+          PACKAGES: ${{ steps.packages.outputs.packages }}
+        run: bun run pkg-pr-new publish --packageManager=bun $PACKAGES
