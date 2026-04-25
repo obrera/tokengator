@@ -1,0 +1,45 @@
+name: Publish
+
+concurrency:
+  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Configure npm registry
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6
+        with:
+          node-version: lts/krypton
+          registry-url: https://registry.npmjs.org
+
+      - name: Create release PR or publish to npm
+        id: changesets
+        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1.7.0
+        with:
+          commit: 'chore: version packages'
+          publish: bun run release
+          title: 'chore: version packages'
+          version: bun run version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
