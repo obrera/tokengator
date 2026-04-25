@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "sourceMap": true,
+    "tsBuildInfoFile": "tsconfig.tsbuildinfo"
+  },
+  "extends": "@tokengator/config/tsconfig.base.json",
+  "include": ["package.json", "src", "test", "tsdown.config.ts"]
+}

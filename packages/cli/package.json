@@ -1,0 +1,36 @@
+{
+  "name": "tokengator",
+  "version": "0.0.0",
+  "license": "MIT",
+  "bin": {
+    "tokengator": "dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "check-types": "tsc -b --noEmit",
+    "test": "bun test ./test"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.2.0",
+    "commander": "^14.0.3",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@tokengator/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "tsdown": "^0.16.5",
+    "typescript": "^5"
+  }
+}
