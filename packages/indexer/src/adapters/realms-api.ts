@@ -22,7 +22,7 @@ export interface RealmsApiRetryOptions {
 }
 
 export interface RealmsRealm {
-  authority: string
+  authority: string | null
   council: string | null
   id: number
   mint: string
@@ -202,15 +202,18 @@ function expectRealmsArray(value: unknown): RealmsRealm[] {
     throw createInvalidResponseError('Invalid Realms API response: expected an array of realms.')
   }
 
-  return value.map((item, index) => {
+  const realms: RealmsRealm[] = []
+
+  for (const item of value) {
+    // The realm directory is provider-wide, so one bad row should not break every lookup.
     const realm = toRealmsRealm(item)
 
-    if (!realm) {
-      throw createInvalidResponseError(`Invalid Realms API response: malformed realm entry at index ${index}.`)
+    if (realm) {
+      realms.push(realm)
     }
+  }
 
-    return realm
-  })
+  return realms
 }
 
 function expectVotersArray(value: unknown): RealmsVoter[] {
@@ -269,7 +272,7 @@ function toRealmsRealm(value: unknown): RealmsRealm | null {
   const program = readString(record.program)
   const publicKey = readString(record.publicKey)
 
-  if (!authority || id === null || !mint || !name || !program || !publicKey) {
+  if (id === null || !mint || !name || !program || !publicKey) {
     return null
   }
 

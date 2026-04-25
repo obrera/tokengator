@@ -16,7 +16,7 @@ const REALM = {
 } as const
 
 const REALM_WITH_OPTIONAL_FIELDS = {
-  authority: 'authority-b',
+  authority: null,
   council: null,
   id: 2,
   mint: 'mint-b',
@@ -56,7 +56,7 @@ describe('createRealmsApiAdapter', () => {
     expect(callCount).toBe(2)
   })
 
-  test('allows realms without council or plugin metadata', async () => {
+  test('allows realms without authority, council, or plugin metadata', async () => {
     const adapter = createRealmsApiAdapter({
       attempts: 1,
       fetch: async () =>
@@ -94,7 +94,7 @@ describe('createRealmsApiAdapter', () => {
     expect(callCount).toBe(2)
   })
 
-  test('fails when realms payload contains malformed entries', async () => {
+  test('ignores malformed realm directory entries', async () => {
     const adapter = createRealmsApiAdapter({
       attempts: 1,
       fetch: async () =>
@@ -106,11 +106,8 @@ describe('createRealmsApiAdapter', () => {
         ]),
     })
 
-    await expect(adapter.getRealm({ realm: REALM.publicKey })).rejects.toMatchObject({
-      code: 'invalid_response',
-      message: 'Invalid Realms API response: malformed realm entry at index 1.',
-      provider: 'realms',
-    })
+    expect(await adapter.getRealm({ realm: REALM.publicKey })).toEqual(REALM)
+    expect(await adapter.getRealm({ realm: 'realm-b' })).toBeNull()
   })
 
   test('fails when voters payload contains malformed entries', async () => {
