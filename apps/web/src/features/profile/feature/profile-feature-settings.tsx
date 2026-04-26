@@ -1,4 +1,4 @@
-import type { ProfileSettingsUpdateInput } from '@tokengator/sdk'
+import type { ProfileListApiKeysResult, ProfileSettingsUpdateInput } from '@tokengator/sdk'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 import { Label } from '@tokengator/ui/components/label'
 import { Switch } from '@tokengator/ui/components/switch'
@@ -10,7 +10,7 @@ import { useProfileSettings } from '../data-access/use-profile-get-settings'
 import { useProfileUpdateSettings } from '../data-access/use-profile-update-settings'
 import { ProfileFeatureApiKeys } from './profile-feature-api-keys'
 
-export function ProfileFeatureSettings() {
+export function ProfileFeatureSettings({ initialApiKeys }: { initialApiKeys?: ProfileListApiKeysResult | null }) {
   const { data: appAuthState } = useAppAuthStateQuery()
   const { data: session } = useAppSession()
   const userId = session?.user.id ?? ''
@@ -77,7 +77,7 @@ export function ProfileFeatureSettings() {
           </div>
         </CardContent>
       </Card>
-      <ProfileFeatureApiKeys userId={userId} />
+      <ProfileFeatureApiKeys initialApiKeys={initialApiKeys} userId={userId} />
     </div>
   )
 }

@@ -118,12 +118,10 @@ function ProfileUiApiKeyRow({
 
 export function ProfileUiApiKeyCard({
   apiKeys,
-  isPending,
   onRevokeApiKey,
   revokingApiKeyCounts,
 }: {
   apiKeys: ProfileApiKeyEntity[]
-  isPending: boolean
   onRevokeApiKey: (id: string) => Promise<boolean>
   revokingApiKeyCounts: Record<string, number>
 }) {
@@ -134,18 +132,15 @@ export function ProfileUiApiKeyCard({
         <CardDescription>Manage API keys created for command line access.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 text-sm">
-        {isPending ? <p className="text-muted-foreground">Loading API keys...</p> : null}
-        {!isPending && apiKeys.length === 0 ? <p className="text-muted-foreground">No API keys yet.</p> : null}
-        {!isPending
-          ? apiKeys.map((apiKey) => (
-              <ProfileUiApiKeyRow
-                apiKey={apiKey}
-                isRevoking={Boolean(revokingApiKeyCounts[apiKey.id])}
-                key={apiKey.id}
-                onRevokeApiKey={onRevokeApiKey}
-              />
-            ))
-          : null}
+        {apiKeys.length === 0 ? <p className="text-muted-foreground">No API keys yet.</p> : null}
+        {apiKeys.map((apiKey) => (
+          <ProfileUiApiKeyRow
+            apiKey={apiKey}
+            isRevoking={Boolean(revokingApiKeyCounts[apiKey.id])}
+            key={apiKey.id}
+            onRevokeApiKey={onRevokeApiKey}
+          />
+        ))}
       </CardContent>
     </Card>
   )
