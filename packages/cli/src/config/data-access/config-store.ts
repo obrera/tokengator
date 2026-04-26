@@ -54,6 +54,16 @@ export type ProfileOptions = ConfigStoreOptions & {
   profile?: string
 }
 
+type ProfileSelection = {
+  hasProfileOverride: boolean
+  profile: string
+}
+
+type ResolvedProfile = {
+  profile: string
+  profileConfig: TokengatorProfileConfig
+}
+
 function createEmptyConfig(): TokengatorConfig {
   return {
     activeProfile: DEFAULT_PROFILE_NAME,
@@ -115,19 +125,22 @@ function requireProfile(config: TokengatorConfig, profileName: string): Tokengat
   return profile
 }
 
-function resolveProfileName(config: TokengatorConfig, options: ProfileOptions = {}): string {
-  const profile = getProfileOverride(options)
+function selectProfile(config: TokengatorConfig, options: ProfileOptions = {}): ProfileSelection {
+  const profileOverride = getProfileOverride(options)
 
-  if (profile) {
-    const profileName = validateProfileName(profile)
-    requireProfile(config, profileName)
-
-    return profileName
+  return {
+    hasProfileOverride: Boolean(profileOverride),
+    profile: profileOverride ? validateProfileName(profileOverride) : config.activeProfile,
   }
+}
 
-  requireProfile(config, config.activeProfile)
+function resolveProfile(config: TokengatorConfig, options: ProfileOptions = {}): ResolvedProfile {
+  const { profile } = selectProfile(config, options)
 
-  return config.activeProfile
+  return {
+    profile,
+    profileConfig: requireProfile(config, profile),
+  }
 }
 
 function sortProfileConfig(profileConfig: TokengatorProfileConfig): TokengatorProfileConfig {
@@ -183,8 +196,7 @@ export function createProfile(
 export function clearAuthCredentials(options: ProfileOptions = {}): { config: TokengatorConfig; profile: string } {
   const configPath = getResolvedConfigPath(options)
   const config = readConfig(configPath)
-  const profile = resolveProfileName(config, options)
-  const profileConfig = requireProfile(config, profile)
+  const { profile, profileConfig } = resolveProfile(config, options)
   const nextProfileConfig: TokengatorProfileConfig = { ...profileConfig }
 
   delete nextProfileConfig.apiKey
@@ -226,8 +238,7 @@ export function deleteProfile(
 
 export function getAuthCredentials(options: ProfileOptions = {}): TokengatorAuthCredentials {
   const config = readConfig(getResolvedConfigPath(options))
-  const profile = resolveProfileName(config, options)
-  const profileConfig = requireProfile(config, profile)
+  const { profile, profileConfig } = resolveProfile(config, options)
 
   return {
     apiKey: profileConfig.apiKey,
@@ -248,14 +259,13 @@ export function getApiUrl(options: ProfileOptions = {}): string {
     throw new ConfigError('API URL is not set. Run "tokengator config init".')
   }
 
-  const profileName = resolveProfileName(config, options)
-  const profile = requireProfile(config, profileName)
+  const { profile: profileName, profileConfig } = resolveProfile(config, options)
 
-  if (!profile.apiUrl) {
+  if (!profileConfig.apiUrl) {
     throw new ConfigError(`API URL is not set for profile "${profileName}".`)
   }
 
-  return profile.apiUrl
+  return profileConfig.apiUrl
 }
 
 export function getConfigPath(env?: NodeJS.ProcessEnv): string {
@@ -338,10 +348,9 @@ export function readConfig(configPath: string = getConfigPath()): TokengatorConf
 export function setApiUrl(apiUrl: string, options: ProfileOptions = {}): { config: TokengatorConfig; profile: string } {
   const configPath = getResolvedConfigPath(options)
   const config = readConfig(configPath)
-  const profileOverride = getProfileOverride(options)
-  const profile = profileOverride ? validateProfileName(profileOverride) : config.activeProfile
+  const { hasProfileOverride, profile } = selectProfile(config, options)
 
-  if (profileOverride || Object.keys(config.profiles).length > 0) {
+  if (hasProfileOverride || Object.keys(config.profiles).length > 0) {
     requireProfile(config, profile)
   }
 
@@ -362,8 +371,7 @@ export function setAuthCredentials(
 ): { config: TokengatorConfig; profile: string } {
   const configPath = getResolvedConfigPath(options)
   const config = readConfig(configPath)
-  const profile = resolveProfileName(config, options)
-  const profileConfig = requireProfile(config, profile)
+  const { profile, profileConfig } = resolveProfile(config, options)
 
   config.profiles[profile] = {
     ...profileConfig,
