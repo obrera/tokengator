@@ -70,6 +70,30 @@ export type ProfileCommunityMembershipEntity = OrganizationMembershipEntity & {
   assetRoles: ProfileCommunityAssetRoleEntity[]
 }
 
+export function toProfileApiKeyEntity(apiKey: {
+  createdAt: Date
+  enabled: boolean | null
+  expiresAt: Date | null
+  id: string
+  lastRequest: Date | null
+  name: string | null
+  prefix: string | null
+  requestCount: number | null
+  start: string | null
+}) {
+  return {
+    createdAt: apiKey.createdAt,
+    enabled: apiKey.enabled ?? true,
+    expiresAt: apiKey.expiresAt,
+    id: apiKey.id,
+    lastRequest: apiKey.lastRequest,
+    name: apiKey.name,
+    prefix: apiKey.prefix,
+    requestCount: apiKey.requestCount ?? 0,
+    start: apiKey.start,
+  }
+}
+
 export interface ProfileIdentityEntity {
   avatarUrl: string | null
   displayName: string | null
@@ -171,8 +195,12 @@ export type ProfileFinalizeDiscordAuthResult = {
   updated: boolean
   username: string | null
 }
+export type ProfileApiKeyEntity = ReturnType<typeof toProfileApiKeyEntity>
 export type ProfileGetSettingsResult = {
   settings: ProfileSettingsEntity
+}
+export type ProfileListApiKeysResult = {
+  apiKeys: ProfileApiKeyEntity[]
 }
 export type ProfileListIdentitiesResult = {
   identities: ProfileIdentityEntity[]
@@ -198,6 +226,9 @@ export type ProfileSolanaWalletEntity = ReturnType<typeof toProfileSolanaWalletE
 export type ProfileSyncDiscordUsernameResult = {
   updated: boolean
   username: string | null
+}
+export type ProfileRevokeApiKeyResult = {
+  apiKeyId: string
 }
 export type ProfileUserEntity = ReturnType<typeof toProfileUserEntity>
 export type ProfileUpdateSettingsResult = {

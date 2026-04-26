@@ -78,11 +78,12 @@ function runIsolatedAuthCheck(databaseUrl: string) {
       username: 'alice',
     })
 
+    const longApiKeyName = 'Tokengator CLI: default on long-workstation.example'
     const apiKey = await auth.api.createApiKey({
       body: {
         configId: 'cli',
         expiresIn: 7776000,
-        name: 'Tokengator CLI on test-host',
+        name: longApiKeyName,
         userId: 'user-1',
       },
     })
@@ -115,6 +116,8 @@ function runIsolatedAuthCheck(databaseUrl: string) {
       expiresAt: apiKey.expiresAt?.toISOString() ?? null,
       defaultExpiresAt: defaultApiKey.expiresAt?.toISOString() ?? null,
       keyPrefixValid: apiKey.key.startsWith('tg_cli_'),
+      name: apiKey.name,
+      nameLength: longApiKeyName.length,
       referenceId: apiKey.referenceId,
       sessionUserId: session?.user.id ?? null,
     }))
@@ -136,6 +139,8 @@ function runIsolatedAuthCheck(databaseUrl: string) {
     expiresAt: string | null
     invalidRejected: boolean
     keyPrefixValid: boolean
+    name: string | null
+    nameLength: number
     referenceId: string
     sessionUserId: string | null
   }
@@ -166,11 +171,13 @@ describe('CLI API key auth config', () => {
     expect(result).toMatchObject({
       invalidRejected: true,
       keyPrefixValid: true,
+      name: 'Tokengator CLI: default on long-workstation.example',
       referenceId: 'user-1',
       sessionUserId: 'user-1',
     })
     expect(typeof result.expiresAt).toBe('string')
     expect(result.defaultExpiresAt).not.toBeNull()
+    expect(result.nameLength).toBeGreaterThan(32)
     expect(new Date(result.defaultExpiresAt ?? '').getTime()).toBeGreaterThanOrEqual(beforeCheck + ninetyDaysMs - 5000)
     expect(new Date(result.defaultExpiresAt ?? '').getTime()).toBeLessThanOrEqual(afterCheck + ninetyDaysMs + 5000)
   })

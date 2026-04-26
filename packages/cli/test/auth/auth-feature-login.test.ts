@@ -53,7 +53,7 @@ function createLoginFetch() {
         data: {
           id: 'new-key-id',
           key: 'tg_cli_new_secret',
-          name: 'Tokengator CLI on test-host',
+          name: 'Tokengator CLI: default on test-host',
         },
       })
     }
@@ -117,7 +117,7 @@ describe('auth feature login', () => {
     expect(readConfig(configPath).profiles.default).toEqual({
       apiKey: 'tg_cli_new_secret',
       apiKeyId: 'new-key-id',
-      apiKeyName: 'Tokengator CLI on test-host',
+      apiKeyName: 'Tokengator CLI: default on test-host',
       apiUrl: 'https://api.example.com',
       authenticatedAt: expect.any(String),
       token: 'legacy-token',
@@ -129,5 +129,12 @@ describe('auth feature login', () => {
       '/api/auth/api-key/create',
       '/api/auth/get-session',
     ])
+    expect(requests[2]?.body).toMatchObject({
+      configId: 'cli',
+      metadata: {
+        clientId: 'tokengator-cli',
+      },
+    })
+    expect((requests[2]?.body as { name?: string } | null)?.name?.startsWith('Tokengator CLI: default on ')).toBe(true)
   })
 })

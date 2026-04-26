@@ -605,6 +605,7 @@ export const auth = betterAuth({
         maxExpiresIn: 365,
         minExpiresIn: 1 / 24,
       },
+      maximumNameLength: 128,
       rateLimit: {
         enabled: true,
         maxRequests: 5000,

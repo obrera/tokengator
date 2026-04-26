@@ -9,6 +9,10 @@ import { authUiPrintLoginSuccess } from './ui/auth-ui-print-login-success'
 const CLI_API_KEY_EXPIRES_IN = 60 * 60 * 24 * 90
 const CLI_CLIENT_ID = 'tokengator-cli'
 
+function getCliApiKeyName(input: { hostname: string; profile: string }) {
+  return `Tokengator CLI: ${input.profile} on ${input.hostname}`
+}
+
 export async function authFeatureLogin(
   options: ProfileOptions & {
     fetch?: AuthApiFetch
@@ -19,6 +23,10 @@ export async function authFeatureLogin(
   const apiUrl = getApiUrl(options)
   const profile = getAuthCredentials(options).profile
   const machineHostname = hostname()
+  const apiKeyName = getCliApiKeyName({
+    hostname: machineHostname,
+    profile,
+  })
   const deviceToken = await runDeviceAuthorizationFlow({
     apiUrl,
     fetch: options.fetch,
@@ -34,7 +42,7 @@ export async function authFeatureLogin(
       clientId: CLI_CLIENT_ID,
       hostname: machineHostname,
     },
-    name: `Tokengator CLI on ${machineHostname}`,
+    name: apiKeyName,
     signal: options.signal,
   })
 
@@ -54,14 +62,14 @@ export async function authFeatureLogin(
       throw new AuthError('API key verification failed. Run "tokengator auth login" again.')
     }
 
-    const apiKeyName = apiKey.name ?? `Tokengator CLI on ${machineHostname}`
+    const storedApiKeyName = apiKey.name ?? apiKeyName
 
     clearStoredAuthCredentials(options)
     setStoredAuthCredentials(
       {
         apiKey: apiKey.key,
         apiKeyId: apiKey.id,
-        apiKeyName,
+        apiKeyName: storedApiKeyName,
         apiUrl,
         authenticatedAt: new Date().toISOString(),
         userId: session.user.id,
@@ -71,7 +79,7 @@ export async function authFeatureLogin(
     )
     authUiPrintLoginSuccess({
       apiKeyId: apiKey.id,
-      apiKeyName,
+      apiKeyName: storedApiKeyName,
       apiUrl,
       profile,
       user: session.user,
