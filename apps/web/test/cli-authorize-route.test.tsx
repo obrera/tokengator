@@ -1,9 +1,17 @@
 import type { ReactElement } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterContextProvider,
+} from '@tanstack/react-router'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test'
 // @ts-expect-error jsdom is installed for tests but does not expose declarations in this workspace.
 import { JSDOM } from 'jsdom'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 import { normalizeCliAuthUserCode, validateCliAuthorizeSearch } from '../src/features/cli-auth/util/cli-auth-user-code'
 
@@ -98,6 +106,36 @@ function createAuthClient() {
   }
 }
 
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      mutations: {
+        retry: false,
+      },
+      queries: {
+        retry: false,
+      },
+    },
+  })
+}
+
+function createTestRouter() {
+  const rootRoute = createRootRoute()
+  const cliAuthorizeRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/cli/authorize',
+  })
+  const routeTree = rootRoute.addChildren([cliAuthorizeRoute])
+
+  return createRouter({
+    history: createMemoryHistory({
+      initialEntries: ['/cli/authorize?user_code=ABCD1234'],
+    }),
+    isServer: true,
+    routeTree,
+  })
+}
+
 function ensureDom() {
   if (typeof document !== 'undefined') {
     return
@@ -134,18 +172,27 @@ function restoreDom() {
 }
 
 function renderWithQueryClient(element: ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      mutations: {
-        retry: false,
-      },
-      queries: {
-        retry: false,
-      },
-    },
-  })
+  const queryClient = createQueryClient()
 
   return render(<QueryClientProvider client={queryClient}>{element}</QueryClientProvider>)
+}
+
+function renderWithoutWindow(element: ReactElement) {
+  const windowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window')
+
+  delete (globalThis as Record<string, unknown>).window
+
+  try {
+    return renderToStaticMarkup(
+      <RouterContextProvider router={createTestRouter()}>
+        <QueryClientProvider client={createQueryClient()}>{element}</QueryClientProvider>
+      </RouterContextProvider>,
+    )
+  } finally {
+    if (windowDescriptor) {
+      Object.defineProperty(globalThis, 'window', windowDescriptor)
+    }
+  }
 }
 
 beforeAll(async () => {
@@ -310,6 +357,12 @@ describe('CLI authorize route', () => {
     }
 
     throw new Error('Expected the route to redirect.')
+  })
+
+  test('server rendering a device request does not require browser env', () => {
+    const html = renderWithoutWindow(<CliAuthFeatureAuthorize initialUserCode="ABCD1234" user={createSession().user} />)
+
+    expect(html).toContain('Authorize Tokengator CLI')
   })
 
   test('approve calls the device approval endpoint and shows the final state', async () => {
