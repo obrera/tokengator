@@ -59,4 +59,4 @@ jobs:
         if: steps.packages.outputs.packages != ''
         env:
           PACKAGES: ${{ steps.packages.outputs.packages }}
-        run: bun run pkg-pr-new publish --packageManager=bun $PACKAGES
+        run: bun run pkg-pr-new publish --bun --packageManager=bun $PACKAGES

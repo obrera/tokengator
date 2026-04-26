@@ -61,7 +61,8 @@
     "lint": "oxlint && oxfmt --check",
     "lint:fix": "oxlint --fix && oxfmt --write",
     "prestart:api": "bun run build && bun db:push",
-    "release": "bun run build && changeset publish",
+    "publish:packages": "bun run --filter '*' publish:npm",
+    "release": "bun run build && bun run publish:packages && bun x changeset tag",
     "ruler:apply": "bun x ruler apply --local-only",
     "setup": "bun run ./scripts/setup.ts",
     "start:api": "bun --bun run --cwd apps/api start",
@@ -83,7 +84,7 @@
     "lefthook": "^2.0.13",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
-    "pkg-pr-new": "^0.0.66",
+    "pkg-pr-new": "^0.0.67",
     "turbo": "^2.8.21",
     "typescript": "^5"
   },
