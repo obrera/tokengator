@@ -27,7 +27,7 @@
     "build": "tsdown",
     "check-types": "tsc -b --noEmit",
     "dev": "bun run ./src/cli.ts",
-    "publish:npm": "bun publish --tolerate-republish ${PUBLISH_TAG:+--tag $PUBLISH_TAG}",
+    "pack:npm": "bun pm pack --quiet --destination \"${PACK_DEST:-.}\"",
     "test": "bun test ./test"
   },
   "dependencies": {

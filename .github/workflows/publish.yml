@@ -60,11 +60,58 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to npm
+      - name: Build
         if: steps.changesets.outputs.hasChangesets == 'false'
-        run: bun run release
+        run: bun run build
+
+      - name: Pack packages
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        shell: bash
+        run: |
+          mkdir -p "$PACK_DEST"
+          bun run pack:packages
         env:
-          NPM_CONFIG_PROVENANCE: 'true'
+          PACK_DEST: ${{ runner.temp }}/npm-packages
+
+      - name: Publish packed packages to npm
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          args=(--provenance)
+          if [ -n "${PUBLISH_TAG:-}" ]; then
+            args+=(--tag "$PUBLISH_TAG")
+          fi
+
+          tarballs=("$RUNNER_TEMP"/npm-packages/*.tgz)
+          if [ "${#tarballs[@]}" -eq 0 ]; then
+            echo "No package tarballs found."
+            exit 1
+          fi
+
+          for tarball in "${tarballs[@]}"; do
+            echo "Publishing $tarball"
+            if output="$(npm publish "$tarball" "${args[@]}" 2>&1)"; then
+              echo "$output"
+              continue
+            else
+              status=$?
+            fi
+
+            echo "$output"
+            if echo "$output" | grep -Eiq 'previously published|cannot publish over'; then
+              echo "$tarball is already published; skipping."
+              continue
+            fi
+
+            exit "$status"
+          done
+
+      - name: Create git tags
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: bun x changeset tag
 
       - name: Push git tags
         if: steps.changesets.outputs.hasChangesets == 'false'
@@ -96,8 +143,47 @@ jobs:
       - name: Create canary version
         run: bun x changeset version --snapshot canary
 
-      - name: Publish canary to npm
-        run: bun run publish:packages
+      - name: Pack packages
+        shell: bash
+        run: |
+          mkdir -p "$PACK_DEST"
+          bun run pack:packages
         env:
-          NPM_CONFIG_PROVENANCE: 'true'
+          PACK_DEST: ${{ runner.temp }}/npm-packages
+
+      - name: Publish canary to npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          args=(--provenance)
+          if [ -n "${PUBLISH_TAG:-}" ]; then
+            args+=(--tag "$PUBLISH_TAG")
+          fi
+
+          tarballs=("$RUNNER_TEMP"/npm-packages/*.tgz)
+          if [ "${#tarballs[@]}" -eq 0 ]; then
+            echo "No package tarballs found."
+            exit 1
+          fi
+
+          for tarball in "${tarballs[@]}"; do
+            echo "Publishing $tarball"
+            if output="$(npm publish "$tarball" "${args[@]}" 2>&1)"; then
+              echo "$output"
+              continue
+            else
+              status=$?
+            fi
+
+            echo "$output"
+            if echo "$output" | grep -Eiq 'previously published|cannot publish over'; then
+              echo "$tarball is already published; skipping."
+              continue
+            fi
+
+            exit "$status"
+          done
+        env:
           PUBLISH_TAG: canary
