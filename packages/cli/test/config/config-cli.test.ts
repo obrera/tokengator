@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { join } from 'node:path'
 
+import { TG_PROFILE_ENV } from '../../src/index'
 import {
   cleanupTempConfigHomes,
   createTempConfigHome,
@@ -116,5 +117,25 @@ describe('config cli commands', () => {
     result = runCli(['config', 'profiles', 'list'], configHome)
     expect(result.exitCode).toBe(0)
     expect(decodeOutput(result.stdout)).toContain('profile')
+  })
+
+  test('uses TG_PROFILE for profile-aware config commands', () => {
+    const configHome = createTempConfigHome()
+
+    let result = runCli(['config', 'set', 'api-url', 'https://api.example.com'], configHome)
+    expect(result.exitCode).toBe(0)
+
+    result = runCli(['config', 'profiles', 'create', 'dev', '--api-url', 'http://localhost:3000'], configHome)
+    expect(result.exitCode).toBe(0)
+
+    result = runCli(['config', 'get', 'api-url'], configHome, { env: { [TG_PROFILE_ENV]: 'dev' } })
+    expect(result.exitCode).toBe(0)
+    expect(decodeOutput(result.stdout).trim()).toBe('http://localhost:3000')
+
+    result = runCli(['config', 'get', 'api-url', '--profile', 'default'], configHome, {
+      env: { [TG_PROFILE_ENV]: 'dev' },
+    })
+    expect(result.exitCode).toBe(0)
+    expect(decodeOutput(result.stdout).trim()).toBe('https://api.example.com')
   })
 })

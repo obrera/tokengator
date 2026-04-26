@@ -8,8 +8,9 @@ import {
   getConfigPath,
   listProfileSummaries,
   readConfig,
-  setAuthCredentials,
   setApiUrl,
+  setAuthCredentials,
+  TG_PROFILE_ENV,
   useProfile,
 } from '../../src/index'
 import { cleanupTempConfigHomes, createTempConfigHome, getTempConfigPath } from './config-test-utils'
@@ -128,6 +129,65 @@ describe('config storage', () => {
     if (process.platform !== 'win32') {
       expect(statSync(configPath).mode & 0o777).toBe(0o600)
     }
+  })
+
+  test('uses TG_PROFILE as a profile override without changing the active profile', () => {
+    const configPath = getTempConfigPath(createTempConfigHome())
+
+    createProfile('prod', 'https://prod.example.com', { configPath })
+    createProfile('dev', 'http://localhost:3000', { configPath })
+
+    expect(getApiUrl({ configPath, env: { [TG_PROFILE_ENV]: 'dev' } })).toBe('http://localhost:3000')
+
+    setApiUrl('http://localhost:4000', { configPath, env: { [TG_PROFILE_ENV]: 'dev' } })
+
+    expect(readConfig(configPath)).toEqual({
+      activeProfile: 'prod',
+      profiles: {
+        dev: {
+          apiUrl: 'http://localhost:4000',
+        },
+        prod: {
+          apiUrl: 'https://prod.example.com',
+        },
+      },
+    })
+  })
+
+  test('prefers an explicit profile over TG_PROFILE', () => {
+    const configPath = getTempConfigPath(createTempConfigHome())
+
+    createProfile('prod', 'https://prod.example.com', { configPath })
+    createProfile('dev', 'http://localhost:3000', { configPath })
+
+    expect(getApiUrl({ configPath, env: { [TG_PROFILE_ENV]: 'dev' }, profile: 'prod' })).toBe(
+      'https://prod.example.com',
+    )
+  })
+
+  test('treats blank TG_PROFILE values as unset', () => {
+    const configPath = getTempConfigPath(createTempConfigHome())
+
+    createProfile('prod', 'https://prod.example.com', { configPath })
+    createProfile('dev', 'http://localhost:3000', { configPath })
+
+    expect(getApiUrl({ configPath, env: { [TG_PROFILE_ENV]: '   ' } })).toBe('https://prod.example.com')
+  })
+
+  test('rejects invalid TG_PROFILE values', () => {
+    const configPath = getTempConfigPath(createTempConfigHome())
+
+    createProfile('prod', 'https://prod.example.com', { configPath })
+
+    expect(() => getApiUrl({ configPath, env: { [TG_PROFILE_ENV]: 'Bad Name' } })).toThrow('Invalid profile name')
+  })
+
+  test('rejects missing TG_PROFILE profiles', () => {
+    const configPath = getTempConfigPath(createTempConfigHome())
+
+    createProfile('prod', 'https://prod.example.com', { configPath })
+
+    expect(() => getApiUrl({ configPath, env: { [TG_PROFILE_ENV]: 'dev' } })).toThrow('Profile "dev" does not exist.')
   })
 
   test('preserves unknown profile fields when writing sorted config', () => {

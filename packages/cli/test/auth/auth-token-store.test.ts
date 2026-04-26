@@ -7,7 +7,7 @@ import {
   getStoredAuthCredentials,
   setStoredAuthCredentials,
 } from '../../src/auth/data-access/auth-token-store'
-import { readConfig } from '../../src/config/data-access/config-store'
+import { readConfig, TG_PROFILE_ENV } from '../../src/config/data-access/config-store'
 import { cleanupTempConfigHomes, createTempConfigHome, getTempConfigPath } from '../config/config-test-utils'
 
 afterEach(() => {
@@ -78,6 +78,36 @@ describe('auth token store', () => {
     )
 
     expect(getAuthenticatedHeaders({ configPath }).get('x-api-key')).toBe('tg_cli_secret')
+  })
+
+  test('returns credentials for the TG_PROFILE profile', () => {
+    const configPath = getTempConfigPath(createTempConfigHome())
+
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        activeProfile: 'default',
+        profiles: {
+          default: {
+            apiKey: 'tg_cli_default_secret',
+            apiUrl: 'https://api.example.com',
+          },
+          dev: {
+            apiKey: 'tg_cli_dev_secret',
+            apiUrl: 'http://localhost:3000',
+          },
+        },
+      }),
+    )
+
+    expect(getStoredAuthCredentials({ configPath, env: { [TG_PROFILE_ENV]: 'dev' } })).toMatchObject({
+      apiKey: 'tg_cli_dev_secret',
+      apiUrl: 'http://localhost:3000',
+      profile: 'dev',
+    })
+    expect(getAuthenticatedHeaders({ configPath, env: { [TG_PROFILE_ENV]: 'dev' } }).get('x-api-key')).toBe(
+      'tg_cli_dev_secret',
+    )
   })
 
   test('clears only auth fields on logout', () => {

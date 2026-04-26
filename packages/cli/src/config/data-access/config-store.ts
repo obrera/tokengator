@@ -6,6 +6,7 @@ import { ConfigError, validateApiUrl, validateProfileName } from '../util/config
 
 export const CONFIG_FILE_NAME = 'config.json'
 export const DEFAULT_PROFILE_NAME = 'default'
+export const TG_PROFILE_ENV = 'TG_PROFILE'
 export const TOKENGATOR_CONFIG_HOME_ENV = 'TOKENGATOR_CONFIG_HOME'
 
 export type TokengatorConfig = {
@@ -93,6 +94,17 @@ function getStoredConfigProfileName(name: string): string | undefined {
   return profileName || undefined
 }
 
+function getProfileOverride(options: ProfileOptions = {}): string | undefined {
+  if (options.profile) {
+    return options.profile
+  }
+
+  const env = options.env ?? process.env
+  const profile = env[TG_PROFILE_ENV]?.trim()
+
+  return profile || undefined
+}
+
 function requireProfile(config: TokengatorConfig, profileName: string): TokengatorProfileConfig {
   const profile = config.profiles[profileName]
 
@@ -103,7 +115,9 @@ function requireProfile(config: TokengatorConfig, profileName: string): Tokengat
   return profile
 }
 
-function resolveProfileName(config: TokengatorConfig, profile: string | undefined): string {
+function resolveProfileName(config: TokengatorConfig, options: ProfileOptions = {}): string {
+  const profile = getProfileOverride(options)
+
   if (profile) {
     const profileName = validateProfileName(profile)
     requireProfile(config, profileName)
@@ -169,7 +183,7 @@ export function createProfile(
 export function clearAuthCredentials(options: ProfileOptions = {}): { config: TokengatorConfig; profile: string } {
   const configPath = getResolvedConfigPath(options)
   const config = readConfig(configPath)
-  const profile = resolveProfileName(config, options.profile)
+  const profile = resolveProfileName(config, options)
   const profileConfig = requireProfile(config, profile)
   const nextProfileConfig: TokengatorProfileConfig = { ...profileConfig }
 
@@ -212,7 +226,7 @@ export function deleteProfile(
 
 export function getAuthCredentials(options: ProfileOptions = {}): TokengatorAuthCredentials {
   const config = readConfig(getResolvedConfigPath(options))
-  const profile = resolveProfileName(config, options.profile)
+  const profile = resolveProfileName(config, options)
   const profileConfig = requireProfile(config, profile)
 
   return {
@@ -234,7 +248,7 @@ export function getApiUrl(options: ProfileOptions = {}): string {
     throw new ConfigError('API URL is not set. Run "tokengator config init".')
   }
 
-  const profileName = resolveProfileName(config, options.profile)
+  const profileName = resolveProfileName(config, options)
   const profile = requireProfile(config, profileName)
 
   if (!profile.apiUrl) {
@@ -324,9 +338,10 @@ export function readConfig(configPath: string = getConfigPath()): TokengatorConf
 export function setApiUrl(apiUrl: string, options: ProfileOptions = {}): { config: TokengatorConfig; profile: string } {
   const configPath = getResolvedConfigPath(options)
   const config = readConfig(configPath)
-  const profile = options.profile ? validateProfileName(options.profile) : config.activeProfile
+  const profileOverride = getProfileOverride(options)
+  const profile = profileOverride ? validateProfileName(profileOverride) : config.activeProfile
 
-  if (options.profile || Object.keys(config.profiles).length > 0) {
+  if (profileOverride || Object.keys(config.profiles).length > 0) {
     requireProfile(config, profile)
   }
 
@@ -347,7 +362,7 @@ export function setAuthCredentials(
 ): { config: TokengatorConfig; profile: string } {
   const configPath = getResolvedConfigPath(options)
   const config = readConfig(configPath)
-  const profile = resolveProfileName(config, options.profile)
+  const profile = resolveProfileName(config, options)
   const profileConfig = requireProfile(config, profile)
 
   config.profiles[profile] = {
