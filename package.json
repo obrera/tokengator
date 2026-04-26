@@ -44,6 +44,7 @@
     "changeset": "changeset",
     "check-types": "turbo check-types",
     "ci": "bun run lint && turbo run build check-types test test:e2e test:integration",
+    "cli": "bun run --cwd packages/cli ./src/cli.ts",
     "db:generate": "bun run --cwd packages/db db:generate",
     "db:local": "bun run --cwd packages/db db:local",
     "db:migrate": "bun run --cwd packages/db db:migrate",

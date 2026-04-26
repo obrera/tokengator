@@ -1,63 +1,26 @@
 #!/usr/bin/env node
 
-import { cancel, intro, isCancel, outro, text } from '@clack/prompts'
 import { Command } from 'commander'
 import pc from 'picocolors'
 import packageJson from '../package.json'
-import { greet } from './index'
+import { createConfigCommand } from './config/config-command'
 
-type CliOptions = {
-  name?: string
-}
+function createProgram(): Command {
+  const program = new Command()
+    .name(packageJson.name)
+    .description(packageJson.description)
+    .version(packageJson.version)
+    .action(() => {
+      program.outputHelp()
+    })
 
-const version = packageJson.version
+  program.addCommand(createConfigCommand())
 
-function normalizeName(name: string | undefined): string | undefined {
-  const trimmed = name?.trim()
-
-  return trimmed || undefined
-}
-
-async function resolveName(options: CliOptions): Promise<string | undefined> {
-  const optionName = normalizeName(options.name)
-
-  if (optionName) {
-    return optionName
-  }
-
-  const answer = await text({
-    defaultValue: 'World',
-    message: 'Who should Tokengator greet?',
-    placeholder: 'World',
-  })
-
-  if (isCancel(answer)) {
-    cancel('Demo cancelled.')
-
-    return undefined
-  }
-
-  return normalizeName(answer) ?? 'World'
+  return program
 }
 
 async function main() {
-  const program = new Command()
-    .name('tokengator')
-    .description('Interactive hello world demo for Tokengator.')
-    .version(version)
-    .option('-n, --name <name>', 'name to greet')
-
-  await program.parseAsync(process.argv)
-
-  intro(pc.cyan(`tokengator v${version}`))
-
-  const name = await resolveName(program.opts<CliOptions>())
-
-  if (!name) {
-    return
-  }
-
-  outro(pc.green(greet(name)))
+  await createProgram().parseAsync(process.argv)
 }
 
 main().catch((error: unknown) => {
