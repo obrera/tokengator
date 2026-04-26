@@ -29,6 +29,7 @@ import { Route as DevUiRouteImport } from './routes/dev/ui'
 import { Route as DevShadcnRouteImport } from './routes/dev/shadcn'
 import { Route as DevBackupRouteImport } from './routes/dev/backup'
 import { Route as DevApiRouteImport } from './routes/dev/api'
+import { Route as CliAuthorizeRouteImport } from './routes/cli/authorize'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as ProfileUsernameRouteRouteImport } from './routes/profile/$username/route'
 import { Route as CommunitiesSlugRouteRouteImport } from './routes/communities/$slug/route'
@@ -166,6 +167,11 @@ const DevApiRoute = DevApiRouteImport.update({
   id: '/api',
   path: '/api',
   getParentRoute: () => DevRoute,
+} as any)
+const CliAuthorizeRoute = CliAuthorizeRouteImport.update({
+  id: '/cli/authorize',
+  path: '/cli/authorize',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/dashboard',
@@ -387,6 +393,7 @@ export interface FileRoutesByFullPath {
   '/communities/$slug': typeof CommunitiesSlugRouteRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRouteRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/cli/authorize': typeof CliAuthorizeRoute
   '/dev/api': typeof DevApiRoute
   '/dev/backup': typeof DevBackupRoute
   '/dev/shadcn': typeof DevShadcnRoute
@@ -440,6 +447,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboard': typeof OnboardRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/cli/authorize': typeof CliAuthorizeRoute
   '/dev/api': typeof DevApiRoute
   '/dev/backup': typeof DevBackupRoute
   '/dev/shadcn': typeof DevShadcnRoute
@@ -495,6 +503,7 @@ export interface FileRoutesById {
   '/communities/$slug': typeof CommunitiesSlugRouteRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRouteRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/cli/authorize': typeof CliAuthorizeRoute
   '/dev/api': typeof DevApiRoute
   '/dev/backup': typeof DevBackupRoute
   '/dev/shadcn': typeof DevShadcnRoute
@@ -556,6 +565,7 @@ export interface FileRouteTypes {
     | '/communities/$slug'
     | '/profile/$username'
     | '/admin/dashboard'
+    | '/cli/authorize'
     | '/dev/api'
     | '/dev/backup'
     | '/dev/shadcn'
@@ -609,6 +619,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboard'
     | '/admin/dashboard'
+    | '/cli/authorize'
     | '/dev/api'
     | '/dev/backup'
     | '/dev/shadcn'
@@ -663,6 +674,7 @@ export interface FileRouteTypes {
     | '/communities/$slug'
     | '/profile/$username'
     | '/admin/dashboard'
+    | '/cli/authorize'
     | '/dev/api'
     | '/dev/backup'
     | '/dev/shadcn'
@@ -720,6 +732,7 @@ export interface RootRouteChildren {
   DevRoute: typeof DevRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardRoute: typeof OnboardRoute
+  CliAuthorizeRoute: typeof CliAuthorizeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -863,6 +876,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dev/api'
       preLoaderRoute: typeof DevApiRouteImport
       parentRoute: typeof DevRoute
+    }
+    '/cli/authorize': {
+      id: '/cli/authorize'
+      path: '/cli/authorize'
+      fullPath: '/cli/authorize'
+      preLoaderRoute: typeof CliAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/dashboard': {
       id: '/admin/dashboard'
@@ -1358,6 +1378,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevRoute: DevRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardRoute: OnboardRoute,
+  CliAuthorizeRoute: CliAuthorizeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

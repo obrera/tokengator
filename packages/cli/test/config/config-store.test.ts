@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, statSync, writeFileSync } from 'node:fs'
 
 import {
   createProfile,
@@ -8,6 +8,7 @@ import {
   getConfigPath,
   listProfileSummaries,
   readConfig,
+  setAuthCredentials,
   setApiUrl,
   useProfile,
 } from '../../src/index'
@@ -124,6 +125,9 @@ describe('config storage', () => {
   }
 }
 `)
+    if (process.platform !== 'win32') {
+      expect(statSync(configPath).mode & 0o777).toBe(0o600)
+    }
   })
 
   test('preserves unknown profile fields when writing sorted config', () => {
@@ -156,6 +160,49 @@ describe('config storage', () => {
           token: 'secret',
         },
       },
+    })
+  })
+
+  test('preserves auth credential fields on partial auth updates', () => {
+    const configPath = getTempConfigPath(createTempConfigHome())
+
+    writeFileSync(
+      configPath,
+      JSON.stringify(
+        {
+          activeProfile: 'default',
+          profiles: {
+            default: {
+              apiKey: 'tg_cli_secret',
+              apiKeyId: 'key-id',
+              apiKeyName: 'Tokengator CLI on host',
+              apiUrl: 'https://api.example.com',
+              authenticatedAt: '2026-04-26T00:00:00.000Z',
+              userId: 'user-1',
+              username: 'alice',
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    )
+
+    setAuthCredentials(
+      {
+        apiUrl: 'https://next-api.example.com',
+      },
+      { configPath },
+    )
+
+    expect(readConfig(configPath).profiles.default).toEqual({
+      apiKey: 'tg_cli_secret',
+      apiKeyId: 'key-id',
+      apiKeyName: 'Tokengator CLI on host',
+      apiUrl: 'https://next-api.example.com',
+      authenticatedAt: '2026-04-26T00:00:00.000Z',
+      userId: 'user-1',
+      username: 'alice',
     })
   })
 

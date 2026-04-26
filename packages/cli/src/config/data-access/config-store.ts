@@ -14,8 +14,25 @@ export type TokengatorConfig = {
 }
 
 export type TokengatorProfileConfig = {
+  apiKey?: string
+  apiKeyId?: string
+  apiKeyName?: string
   apiUrl?: string
+  authenticatedAt?: string
+  userId?: string
+  username?: string
   [key: string]: unknown
+}
+
+export type TokengatorAuthCredentials = {
+  apiKey?: string
+  apiKeyId?: string
+  apiKeyName?: string
+  apiUrl?: string
+  authenticatedAt?: string
+  profile: string
+  userId?: string
+  username?: string
 }
 
 export type ProfileSummary = {
@@ -32,7 +49,7 @@ type ConfigStoreOptions = ConfigPathOptions & {
   configPath?: string
 }
 
-type ProfileOptions = ConfigStoreOptions & {
+export type ProfileOptions = ConfigStoreOptions & {
   profile?: string
 }
 
@@ -149,6 +166,28 @@ export function createProfile(
   }
 }
 
+export function clearAuthCredentials(options: ProfileOptions = {}): { config: TokengatorConfig; profile: string } {
+  const configPath = getResolvedConfigPath(options)
+  const config = readConfig(configPath)
+  const profile = resolveProfileName(config, options.profile)
+  const profileConfig = requireProfile(config, profile)
+  const nextProfileConfig: TokengatorProfileConfig = { ...profileConfig }
+
+  delete nextProfileConfig.apiKey
+  delete nextProfileConfig.apiKeyId
+  delete nextProfileConfig.apiKeyName
+  delete nextProfileConfig.authenticatedAt
+  delete nextProfileConfig.userId
+  delete nextProfileConfig.username
+
+  config.profiles[profile] = nextProfileConfig
+
+  return {
+    config: writeConfig(config, configPath),
+    profile,
+  }
+}
+
 export function deleteProfile(
   name: string,
   options: ConfigStoreOptions = {},
@@ -168,6 +207,23 @@ export function deleteProfile(
   return {
     config: writeConfig(config, configPath),
     profile,
+  }
+}
+
+export function getAuthCredentials(options: ProfileOptions = {}): TokengatorAuthCredentials {
+  const config = readConfig(getResolvedConfigPath(options))
+  const profile = resolveProfileName(config, options.profile)
+  const profileConfig = requireProfile(config, profile)
+
+  return {
+    apiKey: profileConfig.apiKey,
+    apiKeyId: profileConfig.apiKeyId,
+    apiKeyName: profileConfig.apiKeyName,
+    apiUrl: profileConfig.apiUrl,
+    authenticatedAt: profileConfig.authenticatedAt,
+    profile,
+    userId: profileConfig.userId,
+    username: profileConfig.username,
   }
 }
 
@@ -285,6 +341,32 @@ export function setApiUrl(apiUrl: string, options: ProfileOptions = {}): { confi
   }
 }
 
+export function setAuthCredentials(
+  credentials: Omit<TokengatorAuthCredentials, 'profile'>,
+  options: ProfileOptions = {},
+): { config: TokengatorConfig; profile: string } {
+  const configPath = getResolvedConfigPath(options)
+  const config = readConfig(configPath)
+  const profile = resolveProfileName(config, options.profile)
+  const profileConfig = requireProfile(config, profile)
+
+  config.profiles[profile] = {
+    ...profileConfig,
+    apiKey: credentials.apiKey ?? profileConfig.apiKey,
+    apiKeyId: credentials.apiKeyId ?? profileConfig.apiKeyId,
+    apiKeyName: credentials.apiKeyName ?? profileConfig.apiKeyName,
+    apiUrl: credentials.apiUrl ?? profileConfig.apiUrl,
+    authenticatedAt: credentials.authenticatedAt ?? profileConfig.authenticatedAt,
+    userId: credentials.userId ?? profileConfig.userId,
+    username: credentials.username ?? profileConfig.username,
+  }
+
+  return {
+    config: writeConfig(config, configPath),
+    profile,
+  }
+}
+
 export function useProfile(
   name: string,
   options: ConfigStoreOptions = {},
@@ -309,7 +391,7 @@ export function writeConfig(config: TokengatorConfig, configPath: string = getCo
   mkdirSync(dirname(configPath), { recursive: true })
 
   try {
-    writeFileSync(tempPath, `${JSON.stringify(sortedConfig, null, 2)}\n`)
+    writeFileSync(tempPath, `${JSON.stringify(sortedConfig, null, 2)}\n`, { mode: 0o600 })
     renameSync(tempPath, configPath)
   } catch (error) {
     rmSync(tempPath, { force: true })

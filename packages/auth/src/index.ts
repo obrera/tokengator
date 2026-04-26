@@ -1,8 +1,10 @@
 import type { DiscordProfile } from 'better-auth/social-providers'
+import { apiKey } from '@better-auth/api-key'
 import { betterAuth } from 'better-auth'
 import { siws } from 'better-auth-solana'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { createAuthMiddleware } from 'better-auth/api'
+import { bearer, deviceAuthorization } from 'better-auth/plugins'
 import { admin } from 'better-auth/plugins/admin'
 import { organization } from 'better-auth/plugins/organization'
 import { username } from 'better-auth/plugins/username'
@@ -591,6 +593,32 @@ export const auth = betterAuth({
   },
   plugins: [
     admin(),
+    apiKey({
+      apiKeyHeaders: ['x-api-key'],
+      configId: 'cli',
+      defaultPrefix: 'tg_cli_',
+      enableMetadata: true,
+      enableSessionForAPIKeys: true,
+      keyExpiration: {
+        // @better-auth/api-key accepts create/update expiresIn in seconds and min/max bounds in days.
+        defaultExpiresIn: 60 * 60 * 24 * 90,
+        maxExpiresIn: 365,
+        minExpiresIn: 1 / 24,
+      },
+      rateLimit: {
+        enabled: true,
+        maxRequests: 5000,
+        timeWindow: 1000 * 60 * 60,
+      },
+      references: 'user',
+    }),
+    bearer(),
+    deviceAuthorization({
+      expiresIn: '15m',
+      interval: '5s',
+      validateClient: async (clientId) => clientId === 'tokengator-cli',
+      verificationUri: `${env.WEB_URL ?? env.API_URL}/cli/authorize`,
+    }),
     localIdentityProjectionPlugin(),
     organization({
       allowUserToCreateOrganization: false,

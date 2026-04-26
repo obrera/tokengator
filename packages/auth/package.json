@@ -16,6 +16,7 @@
     "test": "bun test ./test"
   },
   "dependencies": {
+    "@better-auth/api-key": "catalog:",
     "@solana/kit": "catalog:",
     "@tokengator/db": "workspace:*",
     "@tokengator/env": "workspace:*",

@@ -102,6 +102,68 @@ export const account = sqliteTable(
   (table) => [index('account_userId_idx').on(table.userId)],
 )
 
+export const apikey = sqliteTable(
+  'apikey',
+  {
+    configId: text('config_id').default('default').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    enabled: integer('enabled', { mode: 'boolean' }).default(true),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
+    id: text('id').primaryKey(),
+    key: text('key').notNull(),
+    lastRefillAt: integer('last_refill_at', { mode: 'timestamp_ms' }),
+    lastRequest: integer('last_request', { mode: 'timestamp_ms' }),
+    metadata: text('metadata'),
+    name: text('name'),
+    permissions: text('permissions'),
+    prefix: text('prefix'),
+    rateLimitEnabled: integer('rate_limit_enabled', { mode: 'boolean' }).default(true),
+    rateLimitMax: integer('rate_limit_max'),
+    rateLimitTimeWindow: integer('rate_limit_time_window'),
+    referenceId: text('reference_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    refillAmount: integer('refill_amount'),
+    refillInterval: integer('refill_interval'),
+    remaining: integer('remaining'),
+    requestCount: integer('request_count').default(0),
+    start: text('start'),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('apikey_configId_idx').on(table.configId),
+    index('apikey_key_idx').on(table.key),
+    index('apikey_referenceId_idx').on(table.referenceId),
+  ],
+)
+
+export const deviceCode = sqliteTable(
+  'device_code',
+  {
+    clientId: text('client_id'),
+    deviceCode: text('device_code').notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    id: text('id').primaryKey(),
+    lastPolledAt: integer('last_polled_at', { mode: 'timestamp_ms' }),
+    pollingInterval: integer('polling_interval'),
+    scope: text('scope'),
+    status: text('status').notNull(),
+    userCode: text('user_code').notNull(),
+    userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    index('deviceCode_deviceCode_idx').on(table.deviceCode),
+    index('deviceCode_expiresAt_idx').on(table.expiresAt),
+    index('deviceCode_status_idx').on(table.status),
+    index('deviceCode_userCode_idx').on(table.userCode),
+  ],
+)
+
 export const identity = sqliteTable(
   'identity',
   {

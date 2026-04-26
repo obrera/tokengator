@@ -83,7 +83,7 @@ export function createApiApp() {
   app.use(
     '/*',
     cors({
-      allowHeaders: ['Content-Type', 'Authorization'],
+      allowHeaders: ['Authorization', 'Content-Type', 'x-api-key'],
       allowMethods: ['GET', 'POST', 'OPTIONS'],
       credentials: true,
       origin: env.CORS_ORIGINS,

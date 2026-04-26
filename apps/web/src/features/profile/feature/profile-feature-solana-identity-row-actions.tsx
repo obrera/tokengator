@@ -1,5 +1,5 @@
 import { MoreHorizontal, PencilLine, PlugZap, Star, Trash2 } from 'lucide-react'
-import { type FormEvent, useEffect, useState } from 'react'
+import { type SubmitEvent, useEffect, useState } from 'react'
 import type { ProfileIdentityEntity, ProfileSolanaWalletEntity } from '@tokengator/sdk'
 import { Button } from '@tokengator/ui/components/button.tsx'
 import {
@@ -94,7 +94,7 @@ export function ProfileFeatureSolanaIdentityRowActions({
     }
   }
 
-  async function handleEditSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleEditSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
 
     await handleUpdate()

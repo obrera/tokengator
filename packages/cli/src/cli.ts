@@ -3,6 +3,7 @@
 import { Command } from 'commander'
 import pc from 'picocolors'
 import packageJson from '../package.json'
+import { createAuthCommand } from './auth/auth-command'
 import { createConfigCommand } from './config/config-command'
 
 function createProgram(): Command {
@@ -14,6 +15,7 @@ function createProgram(): Command {
       program.outputHelp()
     })
 
+  program.addCommand(createAuthCommand())
   program.addCommand(createConfigCommand())
 
   return program

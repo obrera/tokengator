@@ -9,7 +9,7 @@ import { SolanaProvider } from '@/lib/solana-provider'
 import { AuthUiSignInForm } from '../ui/auth-ui-sign-in-form'
 import { AuthFeatureSolanaActions } from './auth-feature-solana-actions'
 
-export function AuthFeatureSignIn() {
+export function AuthFeatureSignIn({ redirect }: { redirect?: string } = {}) {
   const navigate = useNavigate({
     from: '/',
   })
@@ -17,7 +17,9 @@ export function AuthFeatureSignIn() {
 
   async function handleDiscordSignIn() {
     const authClientClient = getAuthClientClient()
-    const callbackURL = `${env.API_URL}/auth-callback`
+    const callbackURL = redirect
+      ? `${env.API_URL}/auth-callback?redirect=${encodeURIComponent(redirect)}`
+      : `${env.API_URL}/auth-callback`
 
     setIsDiscordPending(true)
 
@@ -45,6 +47,11 @@ export function AuthFeatureSignIn() {
           <AuthFeatureSolanaActions
             action="verify"
             onSuccess={() => {
+              if (redirect) {
+                void navigate({ href: redirect, replace: true })
+                return
+              }
+
               void navigate({ to: '/onboard' })
               toast.success('Sign in successful')
             }}
