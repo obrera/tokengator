@@ -21,6 +21,8 @@ describe('ProfileUiItem', () => {
       />,
     )
 
+    expect(markup).toContain('gap-0.5')
+    expect(markup).not.toContain('mb-0.5')
     expect(markup).toContain('>user<')
   })
 })

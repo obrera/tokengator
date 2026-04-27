@@ -33,13 +33,13 @@ export function ProfileUiItem({
       <ItemMedia>
         <ProfileUiAvatar user={user} />
       </ItemMedia>
-      <ItemContent>
-        <ItemTitle className="mb-0.5 gap-1.5 text-lg leading-none">
+      <ItemContent className="gap-0.5">
+        <ItemTitle className="items-start gap-1.5 text-lg leading-none">
           {user.name}
           {user.private ? (
             <LockIcon
               aria-label="Private profile"
-              className="text-muted-foreground size-3.5 shrink-0 translate-y-0.5"
+              className="text-muted-foreground size-3 shrink-0 translate-y-0.5"
               role="img"
             />
           ) : null}
