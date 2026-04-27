@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { ProfileApiKeyEntity } from '@tokengator/sdk'
+import type { AppSession } from '../src/features/auth/data-access/get-app-auth-state'
 
 let appAuthStateDeveloperMode = false
 let apiKeysData: { apiKeys: ProfileApiKeyEntity[] } | undefined = { apiKeys: [] }
@@ -8,6 +9,18 @@ let profileSettingsData: { settings: { developerMode: boolean; private: boolean 
 let profileSettingsPending = false
 let ProfileFeatureSettings: typeof import('../src/features/profile/feature/profile-feature-settings').ProfileFeatureSettings
 let revokingApiKeyCounts: Record<string, number> = {}
+const session: AppSession = {
+  user: {
+    id: 'user-1',
+    image: null,
+    name: 'Test User',
+    username: 'beeman.dev',
+  },
+}
+const profileFeatureSettingsProps = {
+  session,
+  username: 'beeman.dev',
+}
 
 function createApiKey(overrides: Partial<ProfileApiKeyEntity> = {}): ProfileApiKeyEntity {
   return {
@@ -33,16 +46,6 @@ beforeAll(async () => {
             developerMode: appAuthStateDeveloperMode,
             private: false,
           },
-        },
-      },
-    }),
-  }))
-
-  mock.module('@/features/auth/data-access/use-app-session', () => ({
-    useAppSession: () => ({
-      data: {
-        user: {
-          id: 'user-1',
         },
       },
     }),
@@ -97,7 +100,7 @@ describe('ProfileFeatureSettings', () => {
     profileSettingsData = undefined
     profileSettingsPending = true
 
-    const markup = renderToStaticMarkup(<ProfileFeatureSettings />)
+    const markup = renderToStaticMarkup(<ProfileFeatureSettings {...profileFeatureSettingsProps} />)
 
     expect(markup).toContain('aria-checked="true"')
     expect(markup).not.toContain('aria-disabled="true"')
@@ -108,7 +111,7 @@ describe('ProfileFeatureSettings', () => {
       apiKeys: [createApiKey()],
     }
 
-    const markup = renderToStaticMarkup(<ProfileFeatureSettings />)
+    const markup = renderToStaticMarkup(<ProfileFeatureSettings {...profileFeatureSettingsProps} />)
 
     expect(markup).toContain('API Keys')
     expect(markup).toContain('Tokengator CLI on test-host')
@@ -122,7 +125,7 @@ describe('ProfileFeatureSettings', () => {
       apiKeys: [],
     }
 
-    const markup = renderToStaticMarkup(<ProfileFeatureSettings />)
+    const markup = renderToStaticMarkup(<ProfileFeatureSettings {...profileFeatureSettingsProps} />)
 
     expect(markup).toContain('No API keys yet.')
   })
@@ -135,7 +138,7 @@ describe('ProfileFeatureSettings', () => {
       'api-key-1': 1,
     }
 
-    const markup = renderToStaticMarkup(<ProfileFeatureSettings />)
+    const markup = renderToStaticMarkup(<ProfileFeatureSettings {...profileFeatureSettingsProps} />)
 
     expect(markup).toContain('Revoking')
   })

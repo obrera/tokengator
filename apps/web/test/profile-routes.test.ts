@@ -115,7 +115,7 @@ describe('profile route helpers', () => {
     ).toBe(false)
   })
 
-  test('redirects the username index route to the identities tab', async () => {
+  test('redirects the username index route to the assets tab', async () => {
     try {
       await ProfileUsernameIndexRoute.options.beforeLoad?.({
         params: {
@@ -128,7 +128,7 @@ describe('profile route helpers', () => {
           params: {
             username: 'alice',
           },
-          to: '/profile/$username/identities',
+          to: '/profile/$username/assets',
         },
       })
 

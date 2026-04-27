@@ -6,19 +6,20 @@ import { Button } from '@tokengator/ui/components/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 import { Tabs, TabsList, TabsTrigger } from '@tokengator/ui/components/tabs'
 
+import { useProfileByUsernameQuery } from '@/features/profile/data-access/use-profile-by-username-query.tsx'
 import { ProfileUiItem } from '@/features/profile/ui/profile-ui-item.tsx'
 import { ShellUiDebugButton } from '@/features/shell/ui/shell-ui-debug-button.tsx'
 
 const baseProfileTabs = [
   {
-    label: 'Identities',
-    to: '/profile/$username/identities',
-    value: 'identities',
-  },
-  {
     label: 'Assets',
     to: '/profile/$username/assets',
     value: 'assets',
+  },
+  {
+    label: 'Identities',
+    to: '/profile/$username/identities',
+    value: 'identities',
   },
 ] as const
 
@@ -30,7 +31,7 @@ function getCurrentTab(pathname: string): 'assets' | 'identities' | 'settings' {
     return lastSegment
   }
 
-  return 'identities'
+  return 'assets'
 }
 
 export function ProfileFeatureShell({
@@ -45,6 +46,10 @@ export function ProfileFeatureShell({
   user: ProfileUserEntity | null
 }) {
   const location = useLocation()
+  const profile = useProfileByUsernameQuery(user?.username ?? '', {
+    initialData: user,
+  })
+  const currentUser = profile.data ?? user
   const currentTab = getCurrentTab(location.pathname)
   const profileTabs = isOwner
     ? [
@@ -59,8 +64,8 @@ export function ProfileFeatureShell({
 
   return (
     <div className="min-h-full overflow-y-auto px-4 py-6">
-      <div className="mx-auto w-full max-w-xl">
-        {user ? (
+      <div className="mx-auto w-full max-w-6xl">
+        {currentUser ? (
           <div className="grid gap-6">
             <ProfileUiItem
               action={
@@ -69,7 +74,7 @@ export function ProfileFeatureShell({
                     <Button
                       aria-label="Open admin user detail"
                       nativeButton={false}
-                      render={<Link params={{ userId: user.id }} to="/admin/users/$userId" />}
+                      render={<Link params={{ userId: currentUser.id }} to="/admin/users/$userId" />}
                       size="icon-sm"
                       title="Open admin user detail"
                       variant="outline"
@@ -77,18 +82,21 @@ export function ProfileFeatureShell({
                       <Shield />
                     </Button>
                   ) : null}
-                  <ShellUiDebugButton data={user} label="Profile debug data" />
+                  <ShellUiDebugButton data={currentUser} label="Profile debug data" />
                 </>
               }
-              user={user}
+              className="gap-3 px-0 py-0"
+              user={currentUser}
+              variant="default"
             />
             <Tabs value={currentTab}>
-              <TabsList className="w-full justify-start">
+              <TabsList className="justify-start gap-8 p-0" variant="line">
                 {profileTabs.map((tab) => (
                   <TabsTrigger
+                    className="flex-none rounded-none px-0 py-2 text-xs font-semibold uppercase data-active:after:shadow-[0_7px_14px_1px_color-mix(in_oklch,var(--foreground)_35%,transparent)]"
                     key={tab.value}
                     nativeButton={false}
-                    render={<Link params={{ username: user.username }} to={tab.to} />}
+                    render={<Link params={{ username: currentUser.username }} to={tab.to} />}
                     value={tab.value}
                   >
                     {tab.label}

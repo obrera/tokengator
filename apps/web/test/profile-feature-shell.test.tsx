@@ -18,6 +18,12 @@ beforeAll(async () => {
     ShellUiDebugButton: ({ label }: { label: string }) => <button type="button">{label}</button>,
   }))
 
+  mock.module('@/features/profile/data-access/use-profile-by-username-query.tsx', () => ({
+    useProfileByUsernameQuery: (_username: string, options?: { initialData?: unknown }) => ({
+      data: options?.initialData,
+    }),
+  }))
+
   ;({ ProfileFeatureShell } = await import('../src/features/profile/feature/profile-feature-shell'))
 })
 

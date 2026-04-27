@@ -61,7 +61,7 @@ afterAll(() => {
 })
 
 describe('ProfileUiCommunitiesCard', () => {
-  test('renders community cards with asset roles, collections before mints, owned assets, and empty states', () => {
+  test('renders community cards with collapsed asset role summaries and empty states', () => {
     const markup = renderToStaticMarkup(
       <ProfileUiCommunitiesCard
         communities={[
@@ -169,28 +169,17 @@ describe('ProfileUiCommunitiesCard', () => {
     expect(markup).toContain('Perk Shark')
     expect(markup).toContain('rounded-full')
     expect(markup).toContain('PERKS')
-    expect(markup).toContain('href="/communities/alpha-dao/collections/collection-perks?grid=8"')
-    expect(markup).toContain('PEARK #100')
-    expect(markup).toContain('data-slot="hover-card-trigger"')
-    expect(markup).toContain('grid-cols-2')
-    expect(markup).toContain('sm:grid-cols-4')
-    expect(markup).toContain('Background: Forest')
-    expect(markup).toContain('Hat: Crown')
     expect(markup).toContain('Council Power')
     expect(markup).toContain('Realms: Council Power')
-    expect(markup).toContain('Raw total amount')
-    expect(markup).toContain('25')
-    expect(markup).toContain('Wallet holding 1')
-    expect(markup).toContain('wallet-alpha')
-    expect(markup).toContain('Wallet holding 2')
-    expect(markup).toContain('wallet-beta')
     expect(markup).toContain('Beta DAO')
     expect(markup).toContain('No asset-backed roles yet.')
     expect(markup).not.toContain('Genesis Holder')
+    expect(markup).not.toContain('href="/communities/alpha-dao/collections/collection-perks?grid=8"')
+    expect(markup).not.toContain('PEARK #100')
     expect(markup).not.toContain('asset-owned-1-address')
     expect(markup).toContain('Collection: PERKS')
     const collectionIndex = markup.indexOf('Collection: PERKS')
     const realmsIndex = markup.indexOf('Realms: Council Power')
-    expect(collectionIndex).toBeLessThan(realmsIndex)
+    expect(realmsIndex).toBeLessThan(collectionIndex)
   })
 })

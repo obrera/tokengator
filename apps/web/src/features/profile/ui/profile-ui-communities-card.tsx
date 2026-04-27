@@ -10,6 +10,7 @@ import type {
 import { getAssetGroupResolverKindShortLabel } from '@/features/asset-group/util/asset-group-resolver-kind'
 import { CommunityUiAvatar } from '@/features/community/ui/community-ui-avatar'
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@tokengator/ui/components/accordion'
 import { Badge } from '@tokengator/ui/components/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@tokengator/ui/components/hover-card'
@@ -19,10 +20,25 @@ interface ProfileUiCommunitiesCardProps {
   isPending?: boolean
 }
 
-const assetGroupTypeOrder = {
-  collection: 0,
-  mint: 1,
-} as const
+const assetGroupResolverKindOrder = {
+  'helius-collection-assets': 2,
+  'helius-token-accounts': 0,
+  'realms-voters': 1,
+} as const satisfies Record<ProfileCommunityAssetRoleGroupEntity['resolverKind'], number>
+
+const ellipsisLength = 3
+const ellipsisPrefixLength = 6
+const ellipsisSuffixLength = 6
+
+function ellipsifyAddress(address: string) {
+  const trimmedAddress = address.trim()
+
+  if (trimmedAddress.length <= ellipsisPrefixLength + ellipsisSuffixLength + ellipsisLength) {
+    return trimmedAddress
+  }
+
+  return `${trimmedAddress.slice(0, ellipsisPrefixLength)}...${trimmedAddress.slice(-ellipsisSuffixLength)}`
+}
 
 function formatCommunityRole(role: string) {
   return role.replaceAll('-', ' ')
@@ -40,20 +56,31 @@ function getCollectionAssetTraitLabels(asset: ProfileCommunityCollectionAssetEnt
   return asset.traits.map((trait) => getCollectionAssetTraitLabel(trait))
 }
 
+function getAssetGroupSortOrder(assetGroup: ProfileCommunityAssetRoleGroupEntity) {
+  return assetGroupResolverKindOrder[assetGroup.resolverKind]
+}
+
 function sortAssetGroups(assetGroups: ProfileCommunityAssetRoleGroupEntity[]) {
   return [...assetGroups].sort(
     (left, right) =>
-      assetGroupTypeOrder[left.type] - assetGroupTypeOrder[right.type] ||
+      getAssetGroupSortOrder(left) - getAssetGroupSortOrder(right) ||
       left.label.localeCompare(right.label) ||
       left.address.localeCompare(right.address) ||
       left.id.localeCompare(right.id),
   )
 }
 
+function getAssetRoleSortOrder(assetRole: ProfileCommunityAssetRoleEntity) {
+  return Math.min(...assetRole.assetGroups.map((assetGroup) => getAssetGroupSortOrder(assetGroup)))
+}
+
 function sortAssetRoles(assetRoles: ProfileCommunityAssetRoleEntity[]) {
   return [...assetRoles].sort(
     (left, right) =>
-      left.name.localeCompare(right.name) || left.slug.localeCompare(right.slug) || left.id.localeCompare(right.id),
+      getAssetRoleSortOrder(left) - getAssetRoleSortOrder(right) ||
+      left.name.localeCompare(right.name) ||
+      left.slug.localeCompare(right.slug) ||
+      left.id.localeCompare(right.id),
   )
 }
 
@@ -101,7 +128,9 @@ function ProfileUiMintAccountRow({ account, index }: { account: ProfileCommunity
   return (
     <div className="grid gap-1 text-sm">
       <div className="text-muted-foreground text-xs">Wallet holding {index + 1}</div>
-      <div className="min-w-0 truncate font-mono text-xs">{account.owner}</div>
+      <div className="min-w-0 truncate font-mono text-xs" title={account.owner}>
+        {ellipsifyAddress(account.owner)}
+      </div>
       <div className="text-muted-foreground flex flex-wrap gap-x-2 gap-y-1 text-xs">
         <span>Raw amount</span>
         <span className="text-foreground font-mono">{account.amount}</span>
@@ -110,126 +139,122 @@ function ProfileUiMintAccountRow({ account, index }: { account: ProfileCommunity
   )
 }
 
-function ProfileUiCommunityRoleAssetGroup({
-  assetGroup,
-  communitySlug,
-}: {
-  assetGroup: ProfileCommunityAssetRoleGroupEntity
-  communitySlug: string
-}) {
-  const heading = (
-    <>
-      {assetGroup.imageUrl ? (
-        <img
-          alt={assetGroup.label}
-          className="bg-muted size-10 rounded-md border object-cover"
-          loading="lazy"
-          src={assetGroup.imageUrl}
-        />
-      ) : (
-        <div
-          aria-label={`${assetGroup.label} image placeholder`}
-          className="bg-muted size-10 rounded-md border"
-          role="img"
-        />
-      )}
-      <div className="min-w-0">
-        <div className="truncate font-medium">
-          {getAssetGroupResolverKindShortLabel(assetGroup.resolverKind)}: {assetGroup.label}
-        </div>
-        <div className="text-muted-foreground truncate font-mono text-[0.7rem]">{assetGroup.address}</div>
-      </div>
-    </>
-  )
-
-  return (
-    <div className="grid gap-3 border-t pt-4 first:border-t-0 first:pt-0">
-      {assetGroup.type === 'collection' ? (
-        <Link
-          className="hover:text-primary mb-3 flex min-w-0 items-center gap-3 transition-colors"
-          params={{
-            address: assetGroup.address,
-            slug: communitySlug,
-          }}
-          search={{
-            facets: undefined,
-            grid: 8,
-            owner: undefined,
-            query: undefined,
-          }}
-          to="/communities/$slug/collections/$address"
-        >
-          {heading}
-        </Link>
-      ) : (
-        <div className="mb-3 flex min-w-0 items-center gap-3">{heading}</div>
-      )}
-
-      {assetGroup.type === 'collection' ? (
-        assetGroup.ownedAssets.length ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {assetGroup.ownedAssets.map((asset) => (
-              <ProfileUiCollectionAssetTile asset={asset} key={asset.id} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">Nothing here</p>
-        )
-      ) : assetGroup.ownedAccounts.length ? (
-        <div className="grid gap-3">
-          <div className="grid gap-1 text-sm">
-            <span className="text-muted-foreground text-xs">Raw total amount</span>
-            <span className="font-mono text-sm font-medium break-all">{assetGroup.ownedAmount}</span>
-          </div>
-          <div className="grid gap-3">
-            {assetGroup.ownedAccounts.map((account, index) => (
-              <ProfileUiMintAccountRow account={account} index={index} key={account.id} />
-            ))}
-          </div>
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-sm">Nothing here</p>
-      )}
-    </div>
+function ProfileUiAssetGroupIcon({ assetGroup }: { assetGroup: ProfileCommunityAssetRoleGroupEntity }) {
+  return assetGroup.imageUrl ? (
+    <img
+      alt={assetGroup.label}
+      className="bg-muted size-10 shrink-0 rounded-md border object-cover"
+      loading="lazy"
+      src={assetGroup.imageUrl}
+    />
+  ) : (
+    <div
+      aria-label={`${assetGroup.label} image placeholder`}
+      className="bg-muted size-10 shrink-0 rounded-md border"
+      role="img"
+    />
   )
 }
 
-function ProfileUiCommunityAssetRole({
-  assetRole,
-  communitySlug,
+function ProfileUiAssetGroupSummary({
+  assetGroup,
+  assetRoleName,
 }: {
-  assetRole: ProfileCommunityAssetRoleEntity
-  communitySlug: string
+  assetGroup: ProfileCommunityAssetRoleGroupEntity
+  assetRoleName: string
 }) {
-  const sortedAssetGroups = sortAssetGroups(assetRole.assetGroups)
-
   return (
-    <div className="grid gap-4 border-t pt-4 first:border-t-0 first:pt-0">
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="text-muted-foreground text-xs">Role</span>
-          <Badge className="max-w-full truncate" variant="secondary">
-            {assetRole.name}
-          </Badge>
+    <span className="flex min-w-0 items-center gap-3">
+      <ProfileUiAssetGroupIcon assetGroup={assetGroup} />
+      <span className="grid min-w-0 gap-0.5">
+        <span className="truncate font-medium">
+          {getAssetGroupResolverKindShortLabel(assetGroup.resolverKind)}: {assetGroup.label}
+        </span>
+        <span className="text-muted-foreground truncate text-xs">{assetRoleName}</span>
+      </span>
+    </span>
+  )
+}
+
+function ProfileUiCommunityRoleAssetGroup({
+  assetGroup,
+  assetRoleName,
+  communitySlug,
+  value,
+}: {
+  assetGroup: ProfileCommunityAssetRoleGroupEntity
+  assetRoleName: string
+  communitySlug: string
+  value: string
+}) {
+  return (
+    <AccordionItem value={value}>
+      <AccordionTrigger className="items-center gap-3 p-3 hover:no-underline">
+        <ProfileUiAssetGroupSummary assetGroup={assetGroup} assetRoleName={assetRoleName} />
+      </AccordionTrigger>
+      <AccordionContent className="grid gap-3 px-1 pb-3">
+        <div className="grid gap-1 text-sm">
+          <span className="text-muted-foreground text-xs">Address</span>
+          <span className="font-mono text-sm font-medium" title={assetGroup.address}>
+            {ellipsifyAddress(assetGroup.address)}
+          </span>
         </div>
-      </div>
-      {sortedAssetGroups.length ? (
-        sortedAssetGroups.map((assetGroup) => (
-          <ProfileUiCommunityRoleAssetGroup
-            assetGroup={assetGroup}
-            communitySlug={communitySlug}
-            key={`${assetRole.id}:${assetGroup.id}`}
-          />
-        ))
-      ) : (
-        <p className="text-muted-foreground text-sm">No assets found for this role.</p>
-      )}
-    </div>
+        {assetGroup.type === 'collection' ? (
+          <>
+            <Link
+              className="text-primary hover:text-primary/80 w-fit text-xs font-medium transition-colors"
+              params={{
+                address: assetGroup.address,
+                slug: communitySlug,
+              }}
+              search={{
+                facets: undefined,
+                grid: 8,
+                owner: undefined,
+                query: undefined,
+              }}
+              to="/communities/$slug/collections/$address"
+            >
+              View collection
+            </Link>
+            {assetGroup.ownedAssets.length ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {assetGroup.ownedAssets.map((asset) => (
+                  <ProfileUiCollectionAssetTile asset={asset} key={asset.id} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">Nothing here</p>
+            )}
+          </>
+        ) : assetGroup.ownedAccounts.length ? (
+          <>
+            <div className="grid gap-1 text-sm">
+              <span className="text-muted-foreground text-xs">Raw total amount</span>
+              <span className="font-mono text-sm font-medium break-all">{assetGroup.ownedAmount}</span>
+            </div>
+            <div className="grid gap-3">
+              {assetGroup.ownedAccounts.map((account, index) => (
+                <ProfileUiMintAccountRow account={account} index={index} key={account.id} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="text-muted-foreground text-sm">Nothing here</p>
+        )}
+      </AccordionContent>
+    </AccordionItem>
+  )
+}
+
+function getSortedCommunityAssetRoleGroups(community: ProfileCommunityMembershipEntity) {
+  return sortAssetRoles(community.assetRoles).flatMap((assetRole) =>
+    sortAssetGroups(assetRole.assetGroups).map((assetGroup) => ({ assetGroup, assetRole })),
   )
 }
 
 function ProfileUiCommunityAssetCard({ community }: { community: ProfileCommunityMembershipEntity }) {
-  const sortedAssetRoles = sortAssetRoles(community.assetRoles)
+  const sortedAssetRoleGroups = getSortedCommunityAssetRoleGroups(community)
 
   return (
     <Card>
@@ -248,10 +273,18 @@ function ProfileUiCommunityAssetCard({ community }: { community: ProfileCommunit
         <div className="text-muted-foreground text-xs capitalize">{formatCommunityRole(community.role)}</div>
       </CardHeader>
       <CardContent className="grid gap-4">
-        {sortedAssetRoles.length ? (
-          sortedAssetRoles.map((assetRole) => (
-            <ProfileUiCommunityAssetRole assetRole={assetRole} communitySlug={community.slug} key={assetRole.id} />
-          ))
+        {sortedAssetRoleGroups.length ? (
+          <Accordion defaultValue={[]} multiple>
+            {sortedAssetRoleGroups.map(({ assetGroup, assetRole }) => (
+              <ProfileUiCommunityRoleAssetGroup
+                assetGroup={assetGroup}
+                assetRoleName={assetRole.name}
+                communitySlug={community.slug}
+                key={`${assetRole.id}:${assetGroup.id}`}
+                value={`${assetRole.id}:${assetGroup.id}`}
+              />
+            ))}
+          </Accordion>
         ) : (
           <p className="text-muted-foreground text-sm">No asset-backed roles yet.</p>
         )}
@@ -262,16 +295,16 @@ function ProfileUiCommunityAssetCard({ community }: { community: ProfileCommunit
 
 export function ProfileUiCommunitiesCard({ communities, isPending = false }: ProfileUiCommunitiesCardProps) {
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {isPending ? (
-        <Card>
+        <Card className="col-span-full">
           <CardContent>
             <p className="text-muted-foreground text-sm">Loading communities...</p>
           </CardContent>
         </Card>
       ) : null}
       {!isPending && communities.length === 0 ? (
-        <Card>
+        <Card className="col-span-full">
           <CardContent>
             <p className="text-muted-foreground text-sm">No communities yet.</p>
           </CardContent>

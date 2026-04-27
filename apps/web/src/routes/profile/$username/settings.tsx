@@ -15,7 +15,9 @@ export const Route = createFileRoute('/profile/$username/settings')({
       })
     }
 
-    if (!canAccessProfileSettings({ session, username: params.username })) {
+    const username = session.user.username
+
+    if (!username || !canAccessProfileSettings({ session, username: params.username })) {
       throw redirect({
         params: {
           username: params.username,
@@ -28,13 +30,15 @@ export const Route = createFileRoute('/profile/$username/settings')({
 
     return {
       apiKeys,
+      session,
+      username,
     }
   },
   component: RouteComponent,
 })
 
 function RouteComponent() {
-  const { apiKeys } = Route.useRouteContext()
+  const { apiKeys, session, username } = Route.useRouteContext()
 
-  return <ProfileFeatureSettings initialApiKeys={apiKeys} />
+  return <ProfileFeatureSettings initialApiKeys={apiKeys} session={session} username={username} />
 }

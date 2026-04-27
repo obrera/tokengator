@@ -1,29 +1,32 @@
+import type { AppSession } from '@/features/auth/data-access/get-app-auth-state'
 import type { ProfileListApiKeysResult, ProfileSettingsUpdateInput } from '@tokengator/sdk'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 import { Label } from '@tokengator/ui/components/label'
 import { Switch } from '@tokengator/ui/components/switch'
 
 import { useAppAuthStateQuery } from '@/features/auth/data-access/use-app-auth-state-query'
-import { useAppSession } from '@/features/auth/data-access/use-app-session'
 
 import { useProfileSettings } from '../data-access/use-profile-get-settings'
 import { useProfileUpdateSettings } from '../data-access/use-profile-update-settings'
 import { ProfileFeatureApiKeys } from './profile-feature-api-keys'
 
-export function ProfileFeatureSettings({ initialApiKeys }: { initialApiKeys?: ProfileListApiKeysResult | null }) {
+export function ProfileFeatureSettings({
+  initialApiKeys,
+  session,
+  username,
+}: {
+  initialApiKeys?: ProfileListApiKeysResult | null
+  session: AppSession
+  username: string
+}) {
   const { data: appAuthState } = useAppAuthStateQuery()
-  const { data: session } = useAppSession()
-  const userId = session?.user.id ?? ''
+  const userId = session.user.id
   const settings = useProfileSettings(userId)
-  const updateSettings = useProfileUpdateSettings(userId)
+  const updateSettings = useProfileUpdateSettings(userId, username)
   const persistedSettings = settings.data?.settings ?? appAuthState?.profileSettings?.settings ?? null
   const developerMode = updateSettings.pendingSettings?.developerMode ?? persistedSettings?.developerMode ?? false
   const isPrivate = updateSettings.pendingSettings?.private ?? persistedSettings?.private ?? false
   const isDisabled = updateSettings.isPending || (persistedSettings === null && settings.isPending)
-
-  if (!session) {
-    return null
-  }
 
   async function updateProfileSettings(input: ProfileSettingsUpdateInput) {
     await updateSettings.updateSettings(input).catch(() => {
