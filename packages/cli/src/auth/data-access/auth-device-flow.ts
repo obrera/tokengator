@@ -49,12 +49,17 @@ function defaultSleep(milliseconds: number, signal?: AbortSignal) {
 
 function getPollingError(error: AuthError): AuthError {
   if (error.code === 'access_denied') {
-    return new AuthError('CLI access was denied in the browser.', { code: error.code, status: error.status })
+    return new AuthError('CLI access was denied in the browser.', {
+      code: error.code,
+      details: error.details,
+      status: error.status,
+    })
   }
 
   if (error.code === 'expired_token') {
     return new AuthError('The CLI authorization code expired. Run "tokengator auth login" again.', {
       code: error.code,
+      details: error.details,
       status: error.status,
     })
   }
@@ -62,6 +67,7 @@ function getPollingError(error: AuthError): AuthError {
   if (error.code === 'invalid_grant') {
     return new AuthError('The CLI authorization code is no longer valid. Run "tokengator auth login" again.', {
       code: error.code,
+      details: error.details,
       status: error.status,
     })
   }
@@ -90,6 +96,7 @@ export async function runDeviceAuthorizationFlow(args: {
   openBrowser?: typeof openAuthBrowser
   signal?: AbortSignal
   sleep?: AuthDeviceFlowSleep
+  verbose?: boolean
   writeLine?: (message: string) => void
 }): Promise<AuthDeviceToken> {
   const client = args.client ?? defaultClient
@@ -102,6 +109,7 @@ export async function runDeviceAuthorizationFlow(args: {
     fetch: args.fetch,
     scope: TOKENGATOR_CLI_SCOPE,
     signal: args.signal,
+    verbose: args.verbose,
   })
 
   printDeviceAuthorization({ deviceCode, writeLine })
@@ -136,6 +144,7 @@ export async function runDeviceAuthorizationFlow(args: {
         deviceCode: deviceCode.device_code,
         fetch: args.fetch,
         signal: args.signal,
+        verbose: args.verbose,
       })
     } catch (error) {
       if (!(error instanceof AuthError)) {

@@ -18,6 +18,7 @@ export async function authFeatureLogin(
     fetch?: AuthApiFetch
     noOpen?: boolean
     signal?: AbortSignal
+    verbose?: boolean
   } = {},
 ) {
   const apiUrl = getApiUrl(options)
@@ -32,6 +33,7 @@ export async function authFeatureLogin(
     fetch: options.fetch,
     noOpen: options.noOpen,
     signal: options.signal,
+    verbose: options.verbose,
   })
   const apiKey = await createApiKey({
     accessToken: deviceToken.access_token,
@@ -44,6 +46,7 @@ export async function authFeatureLogin(
     },
     name: apiKeyName,
     signal: options.signal,
+    verbose: options.verbose,
   })
 
   if (!apiKey.id || !apiKey.key) {
@@ -56,6 +59,7 @@ export async function authFeatureLogin(
       apiUrl,
       fetch: options.fetch,
       signal: options.signal,
+      verbose: options.verbose,
     })
 
     if (!session) {
@@ -91,6 +95,7 @@ export async function authFeatureLogin(
       fetch: options.fetch,
       keyId: apiKey.id,
       signal: options.signal,
+      verbose: options.verbose,
     }).catch(() => {})
 
     throw error

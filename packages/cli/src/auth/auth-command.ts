@@ -6,6 +6,7 @@ import { authFeatureWhoami } from './auth-feature-whoami'
 
 type AuthCommandOptions = {
   profile?: string
+  verbose?: boolean
 }
 
 type AuthLoginCommandOptions = AuthCommandOptions & {
@@ -20,12 +21,14 @@ export function createAuthCommand(): Command {
   authCommand
     .command('login')
     .description('Log in by approving CLI access in a browser.')
-    .option('--profile <profile>', 'Profile to authenticate.')
     .option('--no-open', 'Print the authorization URL without opening a browser.')
+    .option('--profile <profile>', 'Profile to authenticate.')
+    .option('--verbose', 'Show API request failure details.')
     .action(async (options: AuthLoginCommandOptions) => {
       await authFeatureLogin({
         noOpen: options.open === false,
         profile: options.profile,
+        verbose: options.verbose,
       })
     })
 
@@ -33,9 +36,11 @@ export function createAuthCommand(): Command {
     .command('logout')
     .description('Log out and revoke the stored CLI API key.')
     .option('--profile <profile>', 'Profile to log out.')
+    .option('--verbose', 'Show API request failure details.')
     .action(async (options: AuthCommandOptions) => {
       await authFeatureLogout({
         profile: options.profile,
+        verbose: options.verbose,
       })
     })
 
@@ -43,9 +48,11 @@ export function createAuthCommand(): Command {
     .command('whoami')
     .description('Show the signed-in CLI user.')
     .option('--profile <profile>', 'Profile to inspect.')
+    .option('--verbose', 'Show API request failure details.')
     .action(async (options: AuthCommandOptions) => {
       await authFeatureWhoami({
         profile: options.profile,
+        verbose: options.verbose,
       })
     })
 

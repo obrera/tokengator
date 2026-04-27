@@ -183,4 +183,62 @@ describe('auth api client', () => {
       code: 'authorization_pending',
     } satisfies Partial<AuthError>)
   })
+
+  test('adds failed response details in verbose mode', async () => {
+    const requests: Array<{ body: unknown; headers: Headers; method?: string; url: string }> = []
+    const fetch = createFetch(
+      new Response('<!doctype html><title>Not Found</title>', {
+        headers: {
+          'content-type': 'text/html',
+        },
+        status: 404,
+      }),
+      requests,
+    )
+
+    await expect(
+      requestDeviceCode({
+        apiUrl: 'https://api.example.com',
+        clientId: 'tokengator-cli',
+        fetch,
+        scope: 'cli',
+        verbose: true,
+      }),
+    ).rejects.toMatchObject({
+      details: [
+        'HTTP status: 404',
+        'Request: POST https://api.example.com/api/auth/device/code',
+        'Response content-type: text/html',
+        'Response body: <!doctype html><title>Not Found</title>',
+      ],
+      message: 'Unable to request CLI device code.',
+      status: 404,
+    } satisfies Partial<AuthError>)
+  })
+
+  test('adds request details for verbose transport errors', async () => {
+    const fetch = (async () => {
+      throw Object.assign(new TypeError('fetch failed'), {
+        code: 'ECONNREFUSED',
+      })
+    }) satisfies AuthApiFetch
+
+    await expect(
+      requestDeviceCode({
+        apiUrl: 'https://api.example.com',
+        clientId: 'tokengator-cli',
+        fetch,
+        scope: 'cli',
+        verbose: true,
+      }),
+    ).rejects.toMatchObject({
+      code: 'ECONNREFUSED',
+      details: [
+        'Error code: ECONNREFUSED',
+        'Request: POST https://api.example.com/api/auth/device/code',
+        'Transport error: fetch failed',
+      ],
+      message: 'fetch failed',
+    } satisfies Partial<AuthError>)
+  })
 })
