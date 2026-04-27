@@ -19,6 +19,6 @@
   "devDependencies": {
     "@tokengator/config": "workspace:*",
     "@types/react": "catalog:",
-    "typescript": "^5"
+    "typescript": "catalog:"
   }
 }

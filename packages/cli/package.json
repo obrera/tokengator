@@ -42,7 +42,7 @@
   "devDependencies": {
     "@tokengator/config": "workspace:*",
     "@types/bun": "catalog:",
-    "tsdown": "^0.16.5",
-    "typescript": "^5"
+    "tsdown": "catalog:",
+    "typescript": "catalog:"
   }
 }

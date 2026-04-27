@@ -28,6 +28,6 @@
   },
   "devDependencies": {
     "@tokengator/config": "workspace:*",
-    "typescript": "^5"
+    "typescript": "catalog:"
   }
 }

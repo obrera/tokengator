@@ -19,7 +19,7 @@
         "oxlint": "^1.41.0",
         "pkg-pr-new": "^0.0.67",
         "turbo": "^2.8.21",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "apps/api": {
@@ -45,8 +45,8 @@
       "devDependencies": {
         "@tokengator/config": "workspace:*",
         "@types/bun": "catalog:",
-        "tsdown": "^0.16.5",
-        "typescript": "^5",
+        "tsdown": "catalog:",
+        "typescript": "catalog:",
       },
     },
     "apps/web": {
@@ -92,7 +92,7 @@
         "@types/react-dom": "catalog:",
         "@vitejs/plugin-react": "^5.0.4",
         "jsdom": "^26.0.0",
-        "typescript": "^5",
+        "typescript": "catalog:",
         "vite": "^7.0.2",
         "web-vitals": "^5.0.3",
       },
@@ -121,7 +121,7 @@
       },
       "devDependencies": {
         "@tokengator/config": "workspace:*",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "packages/auth": {
@@ -140,7 +140,7 @@
       },
       "devDependencies": {
         "@tokengator/config": "workspace:*",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "packages/cli": {
@@ -161,8 +161,8 @@
       "devDependencies": {
         "@tokengator/config": "workspace:*",
         "@types/bun": "catalog:",
-        "tsdown": "^0.16.5",
-        "typescript": "^5",
+        "tsdown": "catalog:",
+        "typescript": "catalog:",
       },
     },
     "packages/config": {
@@ -184,7 +184,7 @@
       },
       "devDependencies": {
         "@tokengator/config": "workspace:*",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "packages/discord": {
@@ -198,7 +198,7 @@
       },
       "devDependencies": {
         "@tokengator/config": "workspace:*",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "packages/env": {
@@ -213,7 +213,7 @@
       "devDependencies": {
         "@tokengator/config": "workspace:*",
         "@types/bun": "catalog:",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "packages/indexer": {
@@ -225,7 +225,7 @@
       },
       "devDependencies": {
         "@tokengator/config": "workspace:*",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "packages/logger": {
@@ -236,7 +236,7 @@
       },
       "devDependencies": {
         "@tokengator/config": "workspace:*",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "packages/sdk": {
@@ -253,7 +253,7 @@
         "@types/bun": "catalog:",
         "better-auth": "catalog:",
         "better-auth-solana": "catalog:",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
     "packages/ui": {
@@ -279,7 +279,7 @@
         "@types/react": "catalog:",
         "@types/react-dom": "catalog:",
         "tailwindcss": "catalog:",
-        "typescript": "^5.9.3",
+        "typescript": "catalog:",
       },
     },
     "packages/wallet-ui": {
@@ -293,7 +293,7 @@
       "devDependencies": {
         "@tokengator/config": "workspace:*",
         "@types/react": "catalog:",
-        "typescript": "^5",
+        "typescript": "catalog:",
       },
     },
   },
@@ -325,6 +325,8 @@
     "sonner": "^2.0.5",
     "superjson": "2.2.6",
     "tailwindcss": "^4.1.18",
+    "tsdown": "^0.16.5",
+    "typescript": "5.9.3",
     "zod": "^4.1.13",
   },
   "packages": {
