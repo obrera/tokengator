@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 const API_ENV_PATH = resolve(import.meta.dir, '..', '..', '..', 'apps', 'api', '.env')
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..')
 const RESOLVER_KIND_COLUMN = 'resolver_kind'
+const FATAL_DRIZZLE_OUTPUT_PATTERNS = [/interactive prompts require a tty terminal/i, /sqlite error/i, /sqlite_/i]
 
 dotenv.config({
   path: API_ENV_PATH,
@@ -13,6 +14,10 @@ dotenv.config({
 
 function decodeOutput(buffer: Uint8Array | undefined) {
   return buffer ? Buffer.from(buffer).toString('utf8') : ''
+}
+
+function hasFatalDrizzleOutput(output: string) {
+  return FATAL_DRIZZLE_OUTPUT_PATTERNS.some((pattern) => pattern.test(output))
 }
 
 async function deleteOrphanedAssetGroupRows(client: Client, tableName: 'asset' | 'asset_group_index_run') {
@@ -121,15 +126,26 @@ async function main() {
     stdout: 'pipe',
   })
 
-  process.stdout.write(decodeOutput(result.stdout))
-  process.stderr.write(decodeOutput(result.stderr))
+  const stdout = decodeOutput(result.stdout)
+  const stderr = decodeOutput(result.stderr)
+  const combinedOutput = `${stdout}\n${stderr}`
+
+  process.stdout.write(stdout)
+  process.stderr.write(stderr)
 
   if (result.exitCode === null) {
     process.stderr.write(`drizzle-kit push terminated by signal ${result.signalCode ?? 'unknown'}.\n`)
     process.exit(1)
   }
 
-  process.exit(result.exitCode)
+  if (result.exitCode !== 0) {
+    process.exit(result.exitCode)
+  }
+
+  if (hasFatalDrizzleOutput(combinedOutput)) {
+    process.stderr.write('\ndb:push reported a database error despite exiting 0.\n')
+    process.exit(1)
+  }
 }
 
 await main()
