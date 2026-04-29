@@ -11,4 +11,6 @@ export type {
   CommunityGetBySlugResult,
   CommunityListCollectionAssetsResult,
   CommunityListResult,
+  CommunityRoleAssetGroupEntity,
+  CommunityRoleEntity,
 } from './data-access/community.entity'

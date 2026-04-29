@@ -48,7 +48,7 @@ describe('community collection asset deep-link composition', () => {
           address: 'collection-alpha',
           facetTotals: {},
           id: 'collection-1',
-          imageUrl: null,
+          imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-1',
           label: 'Alpha Collection',
           type: 'collection' as const,
         },
@@ -56,6 +56,7 @@ describe('community collection asset deep-link composition', () => {
       id: 'org-1',
       logo: null,
       name: 'Alpha DAO',
+      roles: [],
       slug: 'alpha-dao',
     }
     const collectionAssets = {

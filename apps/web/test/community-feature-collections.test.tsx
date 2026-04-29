@@ -9,6 +9,7 @@ let community: CommunityGetBySlugResult = {
   id: 'org-1',
   logo: 'https://example.com/community.png',
   name: 'Alpha DAO',
+  roles: [],
   slug: 'alpha-dao',
 }
 
@@ -54,6 +55,7 @@ describe('CommunityFeatureCollections', () => {
       id: 'org-1',
       logo: 'https://example.com/community.png',
       name: 'Alpha DAO',
+      roles: [],
       slug: 'alpha-dao',
     }
 
@@ -63,7 +65,7 @@ describe('CommunityFeatureCollections', () => {
     expect(markup).toContain('No collections are linked to this community yet.')
   })
 
-  test('renders the collection grid with images and placeholders', () => {
+  test('renders the collection grid with images', () => {
     community = {
       collections: [
         {
@@ -78,7 +80,7 @@ describe('CommunityFeatureCollections', () => {
           address: 'collection-beta',
           facetTotals: {},
           id: 'collection-2',
-          imageUrl: null,
+          imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-2',
           label: 'Beta Collection',
           type: 'collection',
         },
@@ -86,6 +88,7 @@ describe('CommunityFeatureCollections', () => {
       id: 'org-1',
       logo: 'https://example.com/community.png',
       name: 'Alpha DAO',
+      roles: [],
       slug: 'alpha-dao',
     }
 
@@ -94,10 +97,10 @@ describe('CommunityFeatureCollections', () => {
     expect(markup).toContain('Alpha Collection')
     expect(markup).toContain('Beta Collection')
     expect(markup).toContain('https://example.com/collection-alpha.png')
+    expect(markup).toContain('https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-2')
     expect(markup).toContain('aspect-square')
     expect(markup).toContain('data-address="collection-alpha"')
     expect(markup).toContain('data-slug="alpha-dao"')
     expect(markup).toContain('/communities/$slug/collections/$address')
-    expect(markup).toContain('data-slot="skeleton"')
   })
 })

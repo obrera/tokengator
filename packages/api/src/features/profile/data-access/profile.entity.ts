@@ -25,7 +25,7 @@ export type ProfileCommunityCollectionAssetTraitEntity = {
 export type ProfileCommunityAssetRoleCollectionGroupEntity = {
   address: string
   id: string
-  imageUrl: string | null
+  imageUrl: string
   label: string
   maximumAmount: string | null
   minimumAmount: string
@@ -44,7 +44,7 @@ export type ProfileCommunityMintAccountEntity = {
 export type ProfileCommunityAssetRoleMintGroupEntity = {
   address: string
   id: string
-  imageUrl: string | null
+  imageUrl: string
   label: string
   maximumAmount: string | null
   minimumAmount: string

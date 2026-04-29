@@ -94,6 +94,10 @@ function getAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGroupResol
   return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
 }
 
+function getExpectedAssetGroupImageUrl(id: string) {
+  return `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(`asset-group:${id}`)}`
+}
+
 async function expectORPCError(
   promise: Promise<unknown>,
   expected: {
@@ -542,7 +546,7 @@ describe('community routes', () => {
             },
           },
           id: 'asset-group-gamma',
-          imageUrl: null,
+          imageUrl: getExpectedAssetGroupImageUrl('asset-group-gamma'),
           label: 'Gamma Collection',
           type: 'collection',
         },
@@ -550,6 +554,68 @@ describe('community routes', () => {
       id: 'org-alpha',
       logo: 'https://example.com/alpha.png',
       name: 'Alpha DAO',
+      roles: [
+        {
+          assetGroups: [
+            {
+              address: 'collection-alpha',
+              id: 'asset-group-alpha',
+              imageUrl: 'https://example.com/collection-alpha.png',
+              label: 'Alpha Collection',
+              maximumAmount: null,
+              minimumAmount: '1',
+              resolverKind: 'helius-collection-assets',
+              type: 'collection',
+            },
+            {
+              address: 'mint-beta',
+              id: 'asset-group-beta',
+              imageUrl: getExpectedAssetGroupImageUrl('asset-group-beta'),
+              label: 'Beta Mint',
+              maximumAmount: null,
+              minimumAmount: '1',
+              resolverKind: 'helius-token-accounts',
+              type: 'mint',
+            },
+            {
+              address: 'collection-gamma',
+              id: 'asset-group-gamma',
+              imageUrl: getExpectedAssetGroupImageUrl('asset-group-gamma'),
+              label: 'Gamma Collection',
+              maximumAmount: null,
+              minimumAmount: '1',
+              resolverKind: 'helius-collection-assets',
+              type: 'collection',
+            },
+          ],
+          assigned: false,
+          assignedAssetGroups: [],
+          id: 'community-role-a',
+          matchMode: 'all',
+          name: 'Collectors',
+          slug: 'collectors',
+        },
+        {
+          assetGroups: [
+            {
+              address: 'collection-alpha',
+              id: 'asset-group-alpha',
+              imageUrl: 'https://example.com/collection-alpha.png',
+              label: 'Alpha Collection',
+              maximumAmount: null,
+              minimumAmount: '2',
+              resolverKind: 'helius-collection-assets',
+              type: 'collection',
+            },
+          ],
+          assigned: false,
+          assignedAssetGroups: [],
+          id: 'community-role-b',
+          matchMode: 'any',
+          name: 'Supporters',
+          slug: 'supporters',
+        },
+      ],
       slug: 'alpha-dao',
     })
   })
@@ -638,7 +704,7 @@ describe('community routes', () => {
           address: 'collection-alpha',
           facetTotals: {},
           id: 'asset-group-alpha',
-          imageUrl: null,
+          imageUrl: getExpectedAssetGroupImageUrl('asset-group-alpha'),
           label: 'Alpha Collection',
           type: 'collection',
         },
@@ -646,6 +712,189 @@ describe('community routes', () => {
       id: 'org-alpha',
       logo: null,
       name: 'Alpha DAO',
+      roles: [
+        {
+          assetGroups: [
+            {
+              address: 'collection-alpha',
+              id: 'asset-group-alpha',
+              imageUrl: getExpectedAssetGroupImageUrl('asset-group-alpha'),
+              label: 'Alpha Collection',
+              maximumAmount: null,
+              minimumAmount: '1',
+              resolverKind: 'helius-collection-assets',
+              type: 'collection',
+            },
+          ],
+          assigned: false,
+          assignedAssetGroups: [],
+          id: 'community-role-a',
+          matchMode: 'all',
+          name: 'Collectors',
+          slug: 'collectors',
+        },
+      ],
+      slug: 'alpha-dao',
+    })
+  })
+
+  test('getBySlug marks roles assigned for the current viewer', async () => {
+    await insertUser({
+      id: 'viewer-user-id',
+      name: 'Viewer',
+      username: 'viewer',
+    })
+    await insertOrganization({
+      id: 'org-alpha',
+      name: 'Alpha DAO',
+      slug: 'alpha-dao',
+    })
+    await insertTeam({
+      id: 'team-alpha-a',
+      name: 'Alpha Team A',
+      organizationId: 'org-alpha',
+    })
+    await insertTeam({
+      id: 'team-alpha-b',
+      name: 'Alpha Team B',
+      organizationId: 'org-alpha',
+    })
+    await insertAssetGroup({
+      address: 'collection-alpha',
+      id: 'asset-group-alpha',
+      imageUrl: 'https://example.com/collection-alpha.png',
+      label: 'Alpha Collection',
+      type: 'collection',
+    })
+    await insertAssetGroup({
+      address: 'collection-beta',
+      id: 'asset-group-beta',
+      label: 'Beta Collection',
+      type: 'collection',
+    })
+    await insertCommunityRole({
+      enabled: true,
+      id: 'community-role-a',
+      matchMode: 'all',
+      name: 'Collectors',
+      organizationId: 'org-alpha',
+      slug: 'collectors',
+      teamId: 'team-alpha-a',
+    })
+    await insertCommunityRole({
+      enabled: true,
+      id: 'community-role-b',
+      matchMode: 'any',
+      name: 'Supporters',
+      organizationId: 'org-alpha',
+      slug: 'supporters',
+      teamId: 'team-alpha-b',
+    })
+    await insertCommunityRoleCondition({
+      assetGroupId: 'asset-group-alpha',
+      communityRoleId: 'community-role-a',
+      minimumAmount: '1',
+    })
+    await insertCommunityRoleCondition({
+      assetGroupId: 'asset-group-beta',
+      communityRoleId: 'community-role-b',
+      minimumAmount: '1',
+    })
+    await insertSolanaWallet({
+      address: 'viewer-wallet',
+      userId: 'viewer-user-id',
+    })
+    await insertAsset({
+      address: 'collection-alpha-asset',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-alpha-1',
+      owner: 'viewer-wallet',
+    })
+
+    const result = await communityRouter.getBySlug.callable(
+      createCallContext({
+        userId: 'viewer-user-id',
+        username: 'viewer',
+      }),
+    )({
+      slug: 'alpha-dao',
+    })
+
+    expect(result).toEqual({
+      collections: [
+        {
+          address: 'collection-alpha',
+          facetTotals: {},
+          id: 'asset-group-alpha',
+          imageUrl: 'https://example.com/collection-alpha.png',
+          label: 'Alpha Collection',
+          type: 'collection',
+        },
+        {
+          address: 'collection-beta',
+          facetTotals: {},
+          id: 'asset-group-beta',
+          imageUrl: getExpectedAssetGroupImageUrl('asset-group-beta'),
+          label: 'Beta Collection',
+          type: 'collection',
+        },
+      ],
+      id: 'org-alpha',
+      logo: null,
+      name: 'Alpha DAO',
+      roles: [
+        {
+          assetGroups: [
+            {
+              address: 'collection-alpha',
+              id: 'asset-group-alpha',
+              imageUrl: 'https://example.com/collection-alpha.png',
+              label: 'Alpha Collection',
+              maximumAmount: null,
+              minimumAmount: '1',
+              resolverKind: 'helius-collection-assets',
+              type: 'collection',
+            },
+          ],
+          assigned: true,
+          assignedAssetGroups: [
+            {
+              address: 'collection-alpha',
+              id: 'asset-group-alpha',
+              imageUrl: 'https://example.com/collection-alpha.png',
+              label: 'Alpha Collection',
+              maximumAmount: null,
+              minimumAmount: '1',
+              resolverKind: 'helius-collection-assets',
+              type: 'collection',
+            },
+          ],
+          id: 'community-role-a',
+          matchMode: 'all',
+          name: 'Collectors',
+          slug: 'collectors',
+        },
+        {
+          assetGroups: [
+            {
+              address: 'collection-beta',
+              id: 'asset-group-beta',
+              imageUrl: getExpectedAssetGroupImageUrl('asset-group-beta'),
+              label: 'Beta Collection',
+              maximumAmount: null,
+              minimumAmount: '1',
+              resolverKind: 'helius-collection-assets',
+              type: 'collection',
+            },
+          ],
+          assigned: false,
+          assignedAssetGroups: [],
+          id: 'community-role-b',
+          matchMode: 'any',
+          name: 'Supporters',
+          slug: 'supporters',
+        },
+      ],
       slug: 'alpha-dao',
     })
   })

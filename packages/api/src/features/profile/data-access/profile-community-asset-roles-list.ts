@@ -5,6 +5,7 @@ import { solanaWallet } from '@tokengator/db/schema/auth'
 import { communityRole, communityRoleCondition } from '@tokengator/db/schema/community-role'
 import { normalizeAmountToBigInt, type ResolverKind } from '@tokengator/indexer'
 
+import { getAssetGroupImageUrl } from '../../../lib/asset-group-image-url'
 import { getSqliteChunkSize, splitIntoChunks } from '../../../lib/sqlite'
 
 import type {
@@ -208,7 +209,7 @@ function toProfileCommunityAssetRoleGroupEntity(input: {
     return {
       address: input.condition.address,
       id: input.condition.id,
-      imageUrl: input.condition.imageUrl,
+      imageUrl: getAssetGroupImageUrl(input.condition),
       label: input.condition.label,
       maximumAmount: input.condition.maximumAmount,
       minimumAmount: input.condition.minimumAmount,
@@ -224,7 +225,7 @@ function toProfileCommunityAssetRoleGroupEntity(input: {
   return {
     address: input.condition.address,
     id: input.condition.id,
-    imageUrl: input.condition.imageUrl,
+    imageUrl: getAssetGroupImageUrl(input.condition),
     label: input.condition.label,
     maximumAmount: input.condition.maximumAmount,
     minimumAmount: input.condition.minimumAmount,

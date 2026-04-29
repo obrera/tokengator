@@ -9,6 +9,7 @@ const community = {
   id: 'org-1',
   logo: 'https://example.com/community.png',
   name: 'Alpha DAO',
+  roles: [],
   slug: 'alpha-dao',
 } satisfies CommunityGetBySlugResult
 

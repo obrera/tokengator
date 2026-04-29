@@ -175,7 +175,7 @@ describe('CommunityCollectionAssetDialogContent', () => {
           address: 'collection-alpha',
           facetTotals: {},
           id: 'collection-1',
-          imageUrl: null,
+          imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-1',
           label: 'Alpha Collection',
           type: 'collection',
         }}

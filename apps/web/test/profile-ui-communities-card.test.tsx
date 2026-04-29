@@ -72,7 +72,7 @@ describe('ProfileUiCommunitiesCard', () => {
                   {
                     address: 'realm-council',
                     id: 'asset-group-mint',
-                    imageUrl: null,
+                    imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Aasset-group-mint',
                     label: 'Council Power',
                     maximumAmount: null,
                     minimumAmount: '1',

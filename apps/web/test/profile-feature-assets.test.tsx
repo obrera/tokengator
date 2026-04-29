@@ -13,7 +13,7 @@ const viewerCommunities = {
             {
               address: 'collection-alpha',
               id: 'asset-group-collection',
-              imageUrl: null,
+              imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Aasset-group-collection',
               label: 'Alpha Collection',
               maximumAmount: null,
               minimumAmount: '1',
@@ -42,7 +42,7 @@ const viewerCommunities = {
             {
               address: 'realm-island',
               id: 'asset-group-mint',
-              imageUrl: null,
+              imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Aasset-group-mint',
               label: 'Council Power',
               maximumAmount: null,
               minimumAmount: '1',

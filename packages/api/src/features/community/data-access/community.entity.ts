@@ -1,5 +1,8 @@
+import type { ResolverKind } from '@tokengator/indexer'
 import { asset, assetTrait } from '@tokengator/db/schema/asset'
 import { organization } from '@tokengator/db/schema/auth'
+
+import { getAssetGroupImageUrl } from '../../../lib/asset-group-image-url'
 
 export const communityCollectionAssetEntityColumns = {
   address: asset.address,
@@ -106,16 +109,62 @@ export function toCommunityCollectionEntity(input: {
   label: string
   type: 'collection'
 }) {
+  return {
+    address: input.address,
+    facetTotals: input.facetTotals,
+    id: input.id,
+    imageUrl: getAssetGroupImageUrl(input),
+    label: input.label,
+    type: input.type,
+  }
+}
+
+export function toCommunityRoleAssetGroupEntity(input: {
+  address: string
+  id: string
+  imageUrl: string | null
+  label: string
+  maximumAmount: string | null
+  minimumAmount: string
+  resolverKind: ResolverKind
+  type: 'collection' | 'mint'
+}) {
+  return {
+    address: input.address,
+    id: input.id,
+    imageUrl: getAssetGroupImageUrl(input),
+    label: input.label,
+    maximumAmount: input.maximumAmount,
+    minimumAmount: input.minimumAmount,
+    resolverKind: input.resolverKind,
+    type: input.type,
+  }
+}
+
+export function toCommunityRoleEntity(input: {
+  assigned: boolean
+  assignedAssetGroups: CommunityRoleAssetGroupEntity[]
+  assetGroups: CommunityRoleAssetGroupEntity[]
+  id: string
+  matchMode: 'all' | 'any'
+  name: string
+  slug: string
+}) {
   return input
 }
 
 export function toCommunityDetailEntity(input: {
   collections: CommunityCollectionEntity[]
   community: CommunityEntity
+  roles: CommunityRoleEntity[]
 }) {
   return {
-    ...input.community,
     collections: input.collections,
+    id: input.community.id,
+    logo: input.community.logo,
+    name: input.community.name,
+    roles: input.roles,
+    slug: input.community.slug,
   }
 }
 
@@ -141,3 +190,5 @@ export type CommunityListCollectionAssetsResult = ReturnType<typeof toCommunityL
 export type CommunityListResult = {
   communities: CommunityEntity[]
 }
+export type CommunityRoleAssetGroupEntity = ReturnType<typeof toCommunityRoleAssetGroupEntity>
+export type CommunityRoleEntity = ReturnType<typeof toCommunityRoleEntity>
