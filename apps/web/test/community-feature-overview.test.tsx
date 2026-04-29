@@ -8,6 +8,12 @@ let community: CommunityGetBySlugResult = {
   collections: [],
   id: 'org-1',
   logo: 'https://example.com/community.png',
+  marketplace: {
+    magicEden: {
+      enabled: false,
+      unavailableReason: 'api-key-missing',
+    },
+  },
   name: 'Alpha DAO',
   roles: [],
   slug: 'alpha-dao',
@@ -70,11 +76,18 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
         id: 'asset-group-alpha',
         imageUrl: 'https://example.com/collection-alpha.png',
         label: 'Alpha Pass',
+        symbolMagicEden: 'alpha-symbol',
         type: 'collection',
       },
     ],
     id: 'org-1',
     logo: 'https://example.com/community.png',
+    marketplace: {
+      magicEden: {
+        enabled: true,
+        unavailableReason: null,
+      },
+    },
     name: 'Alpha DAO',
     roles: [
       {
@@ -87,6 +100,7 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             maximumAmount: null,
             minimumAmount: '1',
             resolverKind: 'helius-collection-assets',
+            symbolMagicEden: 'alpha-symbol',
             type: 'collection',
           },
           {
@@ -97,9 +111,15 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             maximumAmount: '100',
             minimumAmount: '5',
             resolverKind: 'helius-token-accounts',
+            symbolMagicEden: null,
             type: 'mint',
           },
         ],
+        assetMarketplace: {
+          assetGroupId: null,
+          enabled: false,
+          unavailableReason: 'unsupported-role-requirement',
+        },
         assigned: false,
         assignedAssetGroups: [],
         id: 'role-founders',
@@ -117,9 +137,15 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             maximumAmount: null,
             minimumAmount: '1',
             resolverKind: 'helius-token-accounts',
+            symbolMagicEden: null,
             type: 'mint',
           },
         ],
+        assetMarketplace: {
+          assetGroupId: 'asset-group-beta',
+          enabled: false,
+          unavailableReason: 'already-assigned',
+        },
         assigned: true,
         assignedAssetGroups: [
           {
@@ -130,6 +156,7 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             maximumAmount: null,
             minimumAmount: '1',
             resolverKind: 'helius-token-accounts',
+            symbolMagicEden: null,
             type: 'mint',
           },
         ],
@@ -148,6 +175,7 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             maximumAmount: '10',
             minimumAmount: '2',
             resolverKind: 'helius-collection-assets',
+            symbolMagicEden: 'alpha-symbol',
             type: 'collection',
           },
           {
@@ -158,9 +186,15 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             maximumAmount: null,
             minimumAmount: '1',
             resolverKind: 'helius-token-accounts',
+            symbolMagicEden: null,
             type: 'mint',
           },
         ],
+        assetMarketplace: {
+          assetGroupId: null,
+          enabled: false,
+          unavailableReason: 'unsupported-role-requirement',
+        },
         assigned: false,
         assignedAssetGroups: [],
         id: 'role-supporters',
@@ -180,9 +214,28 @@ beforeAll(async () => {
   }))
 
   mock.module('../src/features/community/data-access/use-community-by-slug-query', () => ({
+    getCommunityBySlugQueryKey: (slug: string) => ['community', slug],
     useCommunityBySlugQuery: () => ({
       data: community,
     }),
+  }))
+
+  mock.module('../src/features/community/feature/community-feature-asset-marketplace', () => ({
+    CommunityFeatureAssetMarketplace: ({
+      assetGroup,
+      assetMarketplace,
+      marketplace,
+    }: {
+      assetGroup: CommunityGetBySlugResult['roles'][number]['assetGroups'][number]
+      assetMarketplace: CommunityGetBySlugResult['roles'][number]['assetMarketplace'] | null
+      marketplace: CommunityGetBySlugResult['marketplace']
+    }) =>
+      assetGroup.type === 'collection' &&
+      assetGroup.symbolMagicEden &&
+      assetMarketplace?.enabled &&
+      marketplace.magicEden.enabled ? (
+        <button type="button">Buy NFT</button>
+      ) : null,
   }))
 
   ;({ CommunityFeatureOverview } = await import('../src/features/community/feature/community-feature-overview'))
@@ -198,6 +251,12 @@ describe('CommunityFeatureOverview', () => {
       collections: [],
       id: 'org-1',
       logo: 'https://example.com/community.png',
+      marketplace: {
+        magicEden: {
+          enabled: false,
+          unavailableReason: 'api-key-missing',
+        },
+      },
       name: 'Alpha DAO',
       roles: [],
       slug: 'alpha-dao',
@@ -235,6 +294,7 @@ describe('CommunityFeatureOverview', () => {
     expect(markup).toContain('Mint: Beta Token')
     expect(markup).toContain('Collection - collection-alpha')
     expect(markup).toContain('Mint - mint-beta')
+    expect(markup.match(/Buy NFT/g)?.length ?? 0).toBe(0)
     expect(markup).toContain(getExpectedAssetGroupImageUrl('asset-group-beta').replaceAll('&', '&amp;'))
     expect(markup).toContain('https://example.com/collection-alpha.png')
     expect(collectionLinks?.length).toBe(1)

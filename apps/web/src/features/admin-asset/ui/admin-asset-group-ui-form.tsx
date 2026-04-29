@@ -75,6 +75,7 @@ export function AdminAssetGroupUiForm(props: AdminAssetGroupUiFormProps) {
           imageUrl: values.imageUrl?.trim() || null,
           label: values.label.trim() || ellipsifyAddress(address),
           symbol: values.symbol?.trim() || null,
+          symbolMagicEden: values.symbolMagicEden?.trim() || null,
         })
       }}
     >
@@ -224,6 +225,20 @@ export function AdminAssetGroupUiForm(props: AdminAssetGroupUiFormProps) {
           }
           placeholder="Optional"
           value={values.symbol ?? ''}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="asset-group-symbol-magic-eden">Magic Eden Symbol</Label>
+        <Input
+          id="asset-group-symbol-magic-eden"
+          onChange={(event) =>
+            setValues((currentValues) => ({
+              ...currentValues,
+              symbolMagicEden: event.target.value,
+            }))
+          }
+          placeholder="some_collection_symbol"
+          value={values.symbolMagicEden ?? ''}
         />
       </div>
       <div className="grid gap-1.5">

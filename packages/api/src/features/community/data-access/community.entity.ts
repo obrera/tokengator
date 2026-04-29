@@ -60,6 +60,31 @@ export type CommunityCollectionFacetTotals = Record<
   }
 >
 
+export type CommunityMarketplaceAvailabilityEntity = {
+  magicEden: {
+    enabled: boolean
+    unavailableReason: 'api-key-missing' | 'cluster-unsupported' | 'listing-secret-missing' | null
+  }
+}
+
+export type CommunityRoleAssetMarketplaceEntity =
+  | {
+      assetGroupId: string
+      enabled: true
+      unavailableReason: null
+    }
+  | {
+      assetGroupId: string | null
+      enabled: false
+      unavailableReason:
+        | 'already-assigned'
+        | 'api-key-missing'
+        | 'cluster-unsupported'
+        | 'listing-secret-missing'
+        | 'missing-symbol'
+        | 'unsupported-role-requirement'
+    }
+
 export function toCommunityCollectionAssetEntity(input: {
   address: string
   id: string
@@ -107,6 +132,7 @@ export function toCommunityCollectionEntity(input: {
   id: string
   imageUrl: string | null
   label: string
+  symbolMagicEden: string | null
   type: 'collection'
 }) {
   return {
@@ -115,6 +141,7 @@ export function toCommunityCollectionEntity(input: {
     id: input.id,
     imageUrl: getAssetGroupImageUrl(input),
     label: input.label,
+    symbolMagicEden: input.symbolMagicEden,
     type: input.type,
   }
 }
@@ -127,6 +154,7 @@ export function toCommunityRoleAssetGroupEntity(input: {
   maximumAmount: string | null
   minimumAmount: string
   resolverKind: ResolverKind
+  symbolMagicEden: string | null
   type: 'collection' | 'mint'
 }) {
   return {
@@ -137,6 +165,7 @@ export function toCommunityRoleAssetGroupEntity(input: {
     maximumAmount: input.maximumAmount,
     minimumAmount: input.minimumAmount,
     resolverKind: input.resolverKind,
+    symbolMagicEden: input.symbolMagicEden,
     type: input.type,
   }
 }
@@ -185,7 +214,10 @@ export type CommunityCollectionEntity = ReturnType<typeof toCommunityCollectionE
 export type CommunityCollectionOwnerCandidateEntity = ReturnType<typeof toCommunityCollectionOwnerCandidateEntity>
 export type CommunityDetailEntity = ReturnType<typeof toCommunityDetailEntity>
 export type CommunityEntity = ReturnType<typeof toCommunityEntity>
-export type CommunityGetBySlugResult = CommunityDetailEntity
+export type CommunityGetBySlugResult = Omit<CommunityDetailEntity, 'roles'> & {
+  marketplace: CommunityMarketplaceAvailabilityEntity
+  roles: Array<CommunityRoleEntity & { assetMarketplace: CommunityRoleAssetMarketplaceEntity }>
+}
 export type CommunityListCollectionAssetsResult = ReturnType<typeof toCommunityListCollectionAssetsResult>
 export type CommunityListResult = {
   communities: CommunityEntity[]

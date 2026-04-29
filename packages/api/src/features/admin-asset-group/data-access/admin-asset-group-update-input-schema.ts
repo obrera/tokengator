@@ -19,6 +19,7 @@ export const adminAssetGroupUpdateInputSchema = z.object({
       label: z.string().trim().min(1),
       resolverKind: adminAssetGroupResolverKindSchema.optional(),
       symbol: z.string().trim().nullable().optional(),
+      symbolMagicEden: z.string().trim().nullable().optional(),
       type: adminAssetGroupTypeSchema,
     })
     .superRefine((input, ctx) => {

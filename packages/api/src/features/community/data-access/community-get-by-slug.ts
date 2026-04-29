@@ -81,6 +81,7 @@ export async function communityGetBySlug(slug: string) {
               maximumAmount: condition.maximumAmount,
               minimumAmount: condition.minimumAmount,
               resolverKind: condition.assetGroupResolverKind,
+              symbolMagicEden: condition.assetGroupSymbolMagicEden ?? null,
               type: condition.assetGroupType,
             }),
           )
@@ -148,6 +149,7 @@ export async function communityGetBySlug(slug: string) {
           id: roleAssetGroup.id,
           imageUrl: roleAssetGroup.imageUrl,
           label: roleAssetGroup.label,
+          symbolMagicEden: roleAssetGroup.symbolMagicEden,
           type: roleAssetGroup.type,
         }),
       )

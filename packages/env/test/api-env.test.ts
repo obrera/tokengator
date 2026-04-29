@@ -21,6 +21,8 @@ const API_ENV_KEYS = [
   'HELIUS_CLUSTER',
   'LOG_DEBUG_CATEGORIES',
   'LOG_JSON',
+  'MAGIC_EDEN_API_KEY',
+  'MAGIC_EDEN_LISTING_SECRET',
   'NODE_ENV',
   'PORT',
   'SCHEDULER_START',
@@ -268,6 +270,62 @@ describe('env', () => {
       const { env } = await import(`../src/api.ts?test=${Date.now()}-log-json-false`)
 
       expect(env.LOG_JSON).toBe(false)
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('allows MAGIC_EDEN_API_KEY to be unset or empty', async () => {
+    const restoreEnv = withApiEnv({
+      MAGIC_EDEN_API_KEY: '',
+    })
+
+    try {
+      const { env } = await import(`../src/api.ts?test=${Date.now()}-magic-eden-api-key-empty`)
+
+      expect(env.MAGIC_EDEN_API_KEY).toBeUndefined()
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('exposes MAGIC_EDEN_API_KEY when set', async () => {
+    const restoreEnv = withApiEnv({
+      MAGIC_EDEN_API_KEY: 'magic-eden-api-key',
+    })
+
+    try {
+      const { env } = await import(`../src/api.ts?test=${Date.now()}-magic-eden-api-key-set`)
+
+      expect(env.MAGIC_EDEN_API_KEY).toBe('magic-eden-api-key')
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('allows MAGIC_EDEN_LISTING_SECRET to be unset or empty', async () => {
+    const restoreEnv = withApiEnv({
+      MAGIC_EDEN_LISTING_SECRET: '',
+    })
+
+    try {
+      const { env } = await import(`../src/api.ts?test=${Date.now()}-magic-eden-listing-secret-empty`)
+
+      expect(env.MAGIC_EDEN_LISTING_SECRET).toBeUndefined()
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('exposes MAGIC_EDEN_LISTING_SECRET when set', async () => {
+    const restoreEnv = withApiEnv({
+      MAGIC_EDEN_LISTING_SECRET: '12345678901234567890123456789012',
+    })
+
+    try {
+      const { env } = await import(`../src/api.ts?test=${Date.now()}-magic-eden-listing-secret-set`)
+
+      expect(env.MAGIC_EDEN_LISTING_SECRET).toBe('12345678901234567890123456789012')
     } finally {
       restoreEnv()
     }

@@ -7,8 +7,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@t
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 
 import { useCommunityBySlugQuery } from '../data-access/use-community-by-slug-query'
+import { CommunityFeatureAssetMarketplace } from './community-feature-asset-marketplace'
 
 type CommunityOverviewAssetGroup = CommunityGetBySlugResult['roles'][number]['assetGroups'][number]
+type CommunityOverviewAssetMarketplace = CommunityGetBySlugResult['roles'][number]['assetMarketplace']
 type CommunityOverviewRole = CommunityGetBySlugResult['roles'][number]
 
 const assetGroupResolverKindOrder = {
@@ -59,6 +61,18 @@ function getCommunityOverviewAssetGroups(roles: CommunityOverviewRole[]) {
   }
 
   return [...assetGroupsById.values()].sort(compareCommunityOverviewAssetGroups)
+}
+
+function getCommunityOverviewAssetMarketplaces(roles: CommunityOverviewRole[]) {
+  const assetMarketplacesByAssetGroupId = new Map<string, CommunityOverviewAssetMarketplace>()
+
+  for (const role of roles) {
+    if (role.assetMarketplace.enabled && role.assetMarketplace.assetGroupId) {
+      assetMarketplacesByAssetGroupId.set(role.assetMarketplace.assetGroupId, role.assetMarketplace)
+    }
+  }
+
+  return assetMarketplacesByAssetGroupId
 }
 
 function getCommunityOverviewAssignedRoleAssetGroups(roles: CommunityOverviewRole[]) {
@@ -129,7 +143,17 @@ function CommunityOverviewAssignedRoleRow({
   )
 }
 
-function CommunityOverviewAssetRow({ assetGroup, slug }: { assetGroup: CommunityOverviewAssetGroup; slug: string }) {
+function CommunityOverviewAssetRow({
+  assetGroup,
+  assetMarketplace,
+  marketplace,
+  slug,
+}: {
+  assetGroup: CommunityOverviewAssetGroup
+  assetMarketplace: CommunityOverviewAssetMarketplace | null
+  marketplace: CommunityGetBySlugResult['marketplace']
+  slug: string
+}) {
   const content = (
     <>
       <CommunityOverviewAssetGroupSummary assetGroup={assetGroup} />
@@ -139,22 +163,30 @@ function CommunityOverviewAssetRow({ assetGroup, slug }: { assetGroup: Community
 
   if (assetGroup.type === 'collection') {
     return (
-      <Link
-        className="hover:bg-muted/60 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border p-3 text-left transition-colors"
-        params={{
-          address: assetGroup.address,
-          slug,
-        }}
-        search={{
-          facets: undefined,
-          grid: 8,
-          owner: undefined,
-          query: undefined,
-        }}
-        to="/communities/$slug/collections/$address"
-      >
-        {content}
-      </Link>
+      <div className="grid min-w-0 gap-3 rounded-md border p-3">
+        <Link
+          className="hover:bg-muted/60 -m-1 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md p-1 text-left transition-colors"
+          params={{
+            address: assetGroup.address,
+            slug,
+          }}
+          search={{
+            facets: undefined,
+            grid: 8,
+            owner: undefined,
+            query: undefined,
+          }}
+          to="/communities/$slug/collections/$address"
+        >
+          {content}
+        </Link>
+        <CommunityFeatureAssetMarketplace
+          assetGroup={assetGroup}
+          assetMarketplace={assetMarketplace}
+          marketplace={marketplace}
+          slug={slug}
+        />
+      </div>
     )
   }
 
@@ -200,6 +232,7 @@ export function CommunityFeatureOverview({ initialCommunity }: { initialCommunit
   const assignedRoleAssetGroups = getCommunityOverviewAssignedRoleAssetGroups(data.roles)
   const assignedRoles = data.roles.filter((role) => role.assigned)
   const assetGroups = getCommunityOverviewAssetGroups(data.roles)
+  const assetMarketplacesByAssetGroupId = getCommunityOverviewAssetMarketplaces(data.roles)
   const availableRoles = data.roles.filter((role) => !role.assigned)
 
   return (
@@ -250,7 +283,13 @@ export function CommunityFeatureOverview({ initialCommunity }: { initialCommunit
         <CardContent className="grid gap-3">
           {assetGroups.length ? (
             assetGroups.map((assetGroup) => (
-              <CommunityOverviewAssetRow assetGroup={assetGroup} key={assetGroup.id} slug={data.slug} />
+              <CommunityOverviewAssetRow
+                assetGroup={assetGroup}
+                assetMarketplace={assetMarketplacesByAssetGroupId.get(assetGroup.id) ?? null}
+                key={assetGroup.id}
+                marketplace={data.marketplace}
+                slug={data.slug}
+              />
             ))
           ) : (
             <p className="text-muted-foreground text-sm">No token-gated assets yet.</p>

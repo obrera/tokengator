@@ -199,6 +199,7 @@ describe('CommunityFeatureCollectionAssets', () => {
         id: 'collection-1',
         imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-1',
         label: 'Alpha Collection',
+        symbolMagicEden: null,
         type: 'collection' as const,
       },
     ]

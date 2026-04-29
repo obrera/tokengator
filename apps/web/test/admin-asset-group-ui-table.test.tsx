@@ -18,6 +18,7 @@ describe('AdminAssetGroupUiTable', () => {
       label: 'Alpha Realm',
       resolverKind: 'realms-voters',
       symbol: 'ALPHA',
+      symbolMagicEden: 'alpha_realm',
       type: 'mint',
       updatedAt: new Date('2026-04-15T00:00:00.000Z'),
     } satisfies AdminAssetGroupWithIndexingStatus

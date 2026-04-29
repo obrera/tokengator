@@ -21,6 +21,7 @@ export const assetGroup = sqliteTable(
       enum: ['helius-collection-assets', 'helius-token-accounts', 'realms-voters'],
     }).notNull(),
     symbol: text('symbol'),
+    symbolMagicEden: text('symbol_magic_eden'),
     type: text('type', { enum: ['collection', 'mint'] }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)

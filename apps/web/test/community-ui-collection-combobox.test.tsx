@@ -14,6 +14,7 @@ describe('CommunityUiCollectionCombobox', () => {
             id: 'collection-1',
             imageUrl: 'https://example.com/alpha.png',
             label: 'Alpha Collection',
+            symbolMagicEden: null,
             type: 'collection',
           },
         ]}

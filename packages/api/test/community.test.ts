@@ -11,6 +11,18 @@ type AuthSchema = typeof import('@tokengator/db/schema/auth')
 type CommunityRoleSchema = typeof import('@tokengator/db/schema/community-role')
 type CommunityRouter = typeof import('../src/features/community/feature/community-router').communityRouter
 type DatabaseClient = (typeof import('@tokengator/db'))['db']
+type TestMagicEdenListingInput = {
+  assetAddress: string
+  auctionHouseAddress: string | null
+  id: string
+  imageUrl: string | null
+  name: string | null
+  priceSol: number
+  seller: string
+  sellerExpiry: number
+  tokenAta: string
+  verification: string
+}
 
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..', '..', 'db')
 const ENV_KEYS = [
@@ -25,6 +37,8 @@ const ENV_KEYS = [
   'DISCORD_CLIENT_SECRET',
   'HELIUS_API_KEY',
   'HELIUS_CLUSTER',
+  'MAGIC_EDEN_API_KEY',
+  'MAGIC_EDEN_LISTING_SECRET',
   'NODE_ENV',
   'SOLANA_CLUSTER',
   'SOLANA_ENDPOINT_PUBLIC',
@@ -117,6 +131,61 @@ async function expectORPCError(
   throw new Error(`Expected promise to reject with ${expected.code}.`)
 }
 
+function withMagicEdenApiKey(value: string | undefined) {
+  const previousApiKey = process.env.MAGIC_EDEN_API_KEY
+  const previousListingSecret = process.env.MAGIC_EDEN_LISTING_SECRET
+
+  if (value === undefined) {
+    delete process.env.MAGIC_EDEN_API_KEY
+    delete process.env.MAGIC_EDEN_LISTING_SECRET
+  } else {
+    process.env.MAGIC_EDEN_API_KEY = value
+    process.env.MAGIC_EDEN_LISTING_SECRET = '12345678901234567890123456789012'
+  }
+
+  return () => {
+    if (previousApiKey === undefined) {
+      delete process.env.MAGIC_EDEN_API_KEY
+    } else {
+      process.env.MAGIC_EDEN_API_KEY = previousApiKey
+    }
+
+    if (previousListingSecret === undefined) {
+      delete process.env.MAGIC_EDEN_LISTING_SECRET
+    } else {
+      process.env.MAGIC_EDEN_LISTING_SECRET = previousListingSecret
+    }
+  }
+}
+
+type TestFetch = (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => ReturnType<typeof fetch>
+
+function withFetch(value: TestFetch) {
+  const previousValue = globalThis.fetch
+
+  globalThis.fetch = value as typeof globalThis.fetch
+
+  return () => {
+    globalThis.fetch = previousValue
+  }
+}
+
+function createMagicEdenListingInput(input: Partial<TestMagicEdenListingInput> = {}): TestMagicEdenListingInput {
+  return {
+    assetAddress: 'mint-alpha',
+    auctionHouseAddress: null,
+    id: 'listing-alpha',
+    imageUrl: 'https://example.com/alpha.png',
+    name: 'Alpha NFT',
+    priceSol: 1.25,
+    seller: 'seller-alpha',
+    sellerExpiry: 0,
+    tokenAta: 'ata-alpha',
+    verification: 'listing-verification',
+    ...input,
+  }
+}
+
 async function insertAssetGroup(input: {
   address: string
   enabled?: boolean
@@ -127,6 +196,7 @@ async function insertAssetGroup(input: {
   id: string
   imageUrl?: string | null
   label: string
+  symbolMagicEden?: string | null
   type: 'collection' | 'mint'
 }) {
   await database.insert(assetSchema.assetGroup).values({
@@ -139,6 +209,7 @@ async function insertAssetGroup(input: {
     indexingStartedAt: null,
     label: input.label,
     resolverKind: getAssetGroupResolverKind(input.type),
+    symbolMagicEden: input.symbolMagicEden ?? null,
     type: input.type,
     updatedAt: new Date('2026-04-11T00:00:00.000Z'),
   })
@@ -319,6 +390,8 @@ beforeAll(async () => {
   process.env.DISCORD_CLIENT_SECRET = 'discord-client-secret'
   process.env.HELIUS_API_KEY = 'helius-api-key'
   process.env.HELIUS_CLUSTER = 'devnet'
+  delete process.env.MAGIC_EDEN_API_KEY
+  delete process.env.MAGIC_EDEN_LISTING_SECRET
   process.env.NODE_ENV = 'test'
   process.env.SOLANA_CLUSTER = 'devnet'
   process.env.SOLANA_ENDPOINT_PUBLIC = 'https://api.devnet.solana.com'
@@ -384,7 +457,7 @@ describe('community routes', () => {
       }),
     )()
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       communities: [
         {
           id: 'org-alpha',
@@ -510,7 +583,7 @@ describe('community routes', () => {
       slug: 'alpha-dao',
     })
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       collections: [
         {
           address: 'collection-alpha',
@@ -698,7 +771,7 @@ describe('community routes', () => {
       slug: 'alpha-dao',
     })
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       collections: [
         {
           address: 'collection-alpha',
@@ -820,7 +893,7 @@ describe('community routes', () => {
       slug: 'alpha-dao',
     })
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       collections: [
         {
           address: 'collection-alpha',
@@ -897,6 +970,721 @@ describe('community routes', () => {
       ],
       slug: 'alpha-dao',
     })
+  })
+
+  test('getBySlug exposes Magic Eden asset marketplace eligibility for single collection roles', async () => {
+    const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
+
+    try {
+      await insertOrganization({
+        id: 'org-alpha',
+        name: 'Alpha DAO',
+        slug: 'alpha-dao',
+      })
+      await insertTeam({
+        id: 'team-alpha',
+        name: 'Alpha Team',
+        organizationId: 'org-alpha',
+      })
+      await insertAssetGroup({
+        address: 'collection-alpha',
+        id: 'asset-group-alpha',
+        label: 'Alpha Collection',
+        symbolMagicEden: 'alpha-symbol',
+        type: 'collection',
+      })
+      await insertCommunityRole({
+        enabled: true,
+        id: 'community-role-alpha',
+        matchMode: 'all',
+        name: 'Collectors',
+        organizationId: 'org-alpha',
+        slug: 'collectors',
+        teamId: 'team-alpha',
+      })
+      await insertCommunityRoleCondition({
+        assetGroupId: 'asset-group-alpha',
+        communityRoleId: 'community-role-alpha',
+        minimumAmount: '1',
+      })
+
+      const result = await communityRouter.getBySlug.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
+        }),
+      )({
+        slug: 'alpha-dao',
+      })
+
+      expect(result.collections[0]?.symbolMagicEden).toBe('alpha-symbol')
+      expect(result.marketplace).toEqual({
+        magicEden: {
+          enabled: true,
+          unavailableReason: null,
+        },
+      })
+      expect(result.roles[0]?.assetGroups[0]?.symbolMagicEden).toBe('alpha-symbol')
+      expect(result.roles[0]?.assetMarketplace).toEqual({
+        assetGroupId: 'asset-group-alpha',
+        enabled: true,
+        unavailableReason: null,
+      })
+    } finally {
+      restoreMagicEdenApiKey()
+    }
+  })
+
+  test('getBySlug marks Magic Eden unavailable when the listing secret is missing', async () => {
+    const previousApiKey = process.env.MAGIC_EDEN_API_KEY
+    const previousListingSecret = process.env.MAGIC_EDEN_LISTING_SECRET
+
+    process.env.MAGIC_EDEN_API_KEY = 'magic-eden-api-key'
+    delete process.env.MAGIC_EDEN_LISTING_SECRET
+
+    try {
+      await insertOrganization({
+        id: 'org-alpha',
+        name: 'Alpha DAO',
+        slug: 'alpha-dao',
+      })
+      await insertTeam({
+        id: 'team-alpha',
+        name: 'Alpha Team',
+        organizationId: 'org-alpha',
+      })
+      await insertAssetGroup({
+        address: 'collection-alpha',
+        id: 'asset-group-alpha',
+        label: 'Alpha Collection',
+        symbolMagicEden: 'alpha-symbol',
+        type: 'collection',
+      })
+      await insertCommunityRole({
+        enabled: true,
+        id: 'community-role-alpha',
+        matchMode: 'all',
+        name: 'Collectors',
+        organizationId: 'org-alpha',
+        slug: 'collectors',
+        teamId: 'team-alpha',
+      })
+      await insertCommunityRoleCondition({
+        assetGroupId: 'asset-group-alpha',
+        communityRoleId: 'community-role-alpha',
+        minimumAmount: '1',
+      })
+
+      const result = await communityRouter.getBySlug.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
+        }),
+      )({
+        slug: 'alpha-dao',
+      })
+
+      expect(result.marketplace).toEqual({
+        magicEden: {
+          enabled: false,
+          unavailableReason: 'listing-secret-missing',
+        },
+      })
+      expect(result.roles[0]?.assetMarketplace).toEqual({
+        assetGroupId: 'asset-group-alpha',
+        enabled: false,
+        unavailableReason: 'listing-secret-missing',
+      })
+    } finally {
+      if (previousApiKey === undefined) {
+        delete process.env.MAGIC_EDEN_API_KEY
+      } else {
+        process.env.MAGIC_EDEN_API_KEY = previousApiKey
+      }
+
+      if (previousListingSecret === undefined) {
+        delete process.env.MAGIC_EDEN_LISTING_SECRET
+      } else {
+        process.env.MAGIC_EDEN_LISTING_SECRET = previousListingSecret
+      }
+    }
+  })
+
+  test('getBySlug marks unsupported role requirements as unavailable in the asset marketplace', async () => {
+    const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
+
+    try {
+      await insertOrganization({
+        id: 'org-alpha',
+        name: 'Alpha DAO',
+        slug: 'alpha-dao',
+      })
+      await insertTeam({
+        id: 'team-alpha',
+        name: 'Alpha Team',
+        organizationId: 'org-alpha',
+      })
+      await insertAssetGroup({
+        address: 'collection-alpha',
+        id: 'asset-group-alpha',
+        label: 'Alpha Collection',
+        symbolMagicEden: 'alpha-symbol',
+        type: 'collection',
+      })
+      await insertCommunityRole({
+        enabled: true,
+        id: 'community-role-alpha',
+        matchMode: 'all',
+        name: 'Collectors',
+        organizationId: 'org-alpha',
+        slug: 'collectors',
+        teamId: 'team-alpha',
+      })
+      await insertCommunityRoleCondition({
+        assetGroupId: 'asset-group-alpha',
+        communityRoleId: 'community-role-alpha',
+        minimumAmount: '2',
+      })
+
+      const result = await communityRouter.getBySlug.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
+        }),
+      )({
+        slug: 'alpha-dao',
+      })
+
+      expect(result.roles[0]?.assetMarketplace).toEqual({
+        assetGroupId: null,
+        enabled: false,
+        unavailableReason: 'unsupported-role-requirement',
+      })
+    } finally {
+      restoreMagicEdenApiKey()
+    }
+  })
+
+  test('listAssetMarketplaceListings rejects when Magic Eden is not configured', async () => {
+    const restoreMagicEdenApiKey = withMagicEdenApiKey(undefined)
+
+    try {
+      await expectORPCError(
+        communityRouter.listAssetMarketplaceListings.callable(
+          createCallContext({
+            userId: 'viewer-user-id',
+            username: 'viewer',
+          }),
+        )({
+          assetGroupId: 'asset-group-alpha',
+          limit: 12,
+          slug: 'alpha-dao',
+        }),
+        {
+          code: 'BAD_REQUEST',
+          message: 'Magic Eden purchases are not configured.',
+          status: 400,
+        },
+      )
+    } finally {
+      restoreMagicEdenApiKey()
+    }
+  })
+
+  test('listAssetMarketplaceListings rejects collections without an enabled role marketplace', async () => {
+    const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
+
+    try {
+      await insertOrganization({
+        id: 'org-alpha',
+        name: 'Alpha DAO',
+        slug: 'alpha-dao',
+      })
+      await insertTeam({
+        id: 'team-alpha',
+        name: 'Alpha Team',
+        organizationId: 'org-alpha',
+      })
+      await insertAssetGroup({
+        address: 'collection-alpha',
+        id: 'asset-group-alpha',
+        label: 'Alpha Collection',
+        symbolMagicEden: 'alpha-symbol',
+        type: 'collection',
+      })
+      await insertCommunityRole({
+        enabled: true,
+        id: 'community-role-alpha',
+        matchMode: 'all',
+        name: 'Collectors',
+        organizationId: 'org-alpha',
+        slug: 'collectors',
+        teamId: 'team-alpha',
+      })
+      await insertCommunityRoleCondition({
+        assetGroupId: 'asset-group-alpha',
+        communityRoleId: 'community-role-alpha',
+        minimumAmount: '2',
+      })
+
+      await expectORPCError(
+        communityRouter.listAssetMarketplaceListings.callable(
+          createCallContext({
+            userId: 'viewer-user-id',
+            username: 'viewer',
+          }),
+        )({
+          assetGroupId: 'asset-group-alpha',
+          limit: 12,
+          slug: 'alpha-dao',
+        }),
+        {
+          code: 'BAD_REQUEST',
+          message: 'This community collection is not available for marketplace purchases.',
+          status: 400,
+        },
+      )
+    } finally {
+      restoreMagicEdenApiKey()
+    }
+  })
+
+  test('prepareAssetMarketplaceBuy rejects buyer wallets that are not linked to the user', async () => {
+    const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
+
+    try {
+      await insertUser({
+        id: 'viewer-user-id',
+        name: 'Viewer',
+        username: 'viewer',
+      })
+      await insertOrganization({
+        id: 'org-alpha',
+        name: 'Alpha DAO',
+        slug: 'alpha-dao',
+      })
+      await insertTeam({
+        id: 'team-alpha',
+        name: 'Alpha Team',
+        organizationId: 'org-alpha',
+      })
+      await insertAssetGroup({
+        address: 'collection-alpha',
+        id: 'asset-group-alpha',
+        label: 'Alpha Collection',
+        symbolMagicEden: 'alpha-symbol',
+        type: 'collection',
+      })
+      await insertCommunityRole({
+        enabled: true,
+        id: 'community-role-alpha',
+        matchMode: 'all',
+        name: 'Collectors',
+        organizationId: 'org-alpha',
+        slug: 'collectors',
+        teamId: 'team-alpha',
+      })
+      await insertCommunityRoleCondition({
+        assetGroupId: 'asset-group-alpha',
+        communityRoleId: 'community-role-alpha',
+        minimumAmount: '1',
+      })
+
+      await expectORPCError(
+        communityRouter.prepareAssetMarketplaceBuy.callable(
+          createCallContext({
+            userId: 'viewer-user-id',
+            username: 'viewer',
+          }),
+        )({
+          assetGroupId: 'asset-group-alpha',
+          buyer: 'unlinked-wallet',
+          listing: createMagicEdenListingInput(),
+          slug: 'alpha-dao',
+        }),
+        {
+          code: 'FORBIDDEN',
+          message: 'Buyer wallet is not linked to your profile.',
+          status: 403,
+        },
+      )
+    } finally {
+      restoreMagicEdenApiKey()
+    }
+  })
+
+  test('prepareAssetMarketplaceBuy prepares the selected listing snapshot', async () => {
+    const requestedUrls: string[] = []
+    const restoreFetch = withFetch(async (input) => {
+      const url = String(input)
+
+      requestedUrls.push(url)
+
+      if (url.includes('/v2/collections/alpha-symbol/listings')) {
+        return Response.json([
+          {
+            pdaAddress: 'listing-alpha',
+            price: 1.25,
+            seller: 'seller-alpha',
+            sellerExpiry: 0,
+            token: {
+              image: 'https://example.com/alpha.png',
+              mintAddress: 'mint-alpha',
+              name: 'Alpha NFT',
+            },
+            tokenATA: 'ata-alpha',
+          },
+        ])
+      }
+
+      return Response.json({
+        txSigned: {
+          data: [1, 2, 3],
+        },
+      })
+    })
+    const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
+
+    try {
+      await insertUser({
+        id: 'viewer-user-id',
+        name: 'Viewer',
+        username: 'viewer',
+      })
+      await insertSolanaWallet({
+        address: 'buyer-alpha',
+        userId: 'viewer-user-id',
+      })
+      await insertOrganization({
+        id: 'org-alpha',
+        name: 'Alpha DAO',
+        slug: 'alpha-dao',
+      })
+      await insertTeam({
+        id: 'team-alpha',
+        name: 'Alpha Team',
+        organizationId: 'org-alpha',
+      })
+      await insertAssetGroup({
+        address: 'collection-alpha',
+        id: 'asset-group-alpha',
+        label: 'Alpha Collection',
+        symbolMagicEden: 'alpha-symbol',
+        type: 'collection',
+      })
+      await insertCommunityRole({
+        enabled: true,
+        id: 'community-role-alpha',
+        matchMode: 'all',
+        name: 'Collectors',
+        organizationId: 'org-alpha',
+        slug: 'collectors',
+        teamId: 'team-alpha',
+      })
+      await insertCommunityRoleCondition({
+        assetGroupId: 'asset-group-alpha',
+        communityRoleId: 'community-role-alpha',
+        minimumAmount: '1',
+      })
+
+      const listingsResult = await communityRouter.listAssetMarketplaceListings.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
+        }),
+      )({
+        assetGroupId: 'asset-group-alpha',
+        limit: 12,
+        slug: 'alpha-dao',
+      })
+      const [listing] = listingsResult.listings
+
+      if (!listing) {
+        throw new Error('Expected listing fixture to be returned.')
+      }
+
+      const listingExpiresAt = Number(listing.verification.split('.')[1])
+
+      if (!Number.isFinite(listingExpiresAt)) {
+        throw new Error('Expected listing verification to include an expiry.')
+      }
+
+      await expectORPCError(
+        communityRouter.prepareAssetMarketplaceBuy.callable(
+          createCallContext({
+            userId: 'viewer-user-id',
+            username: 'viewer',
+          }),
+        )({
+          assetGroupId: 'asset-group-alpha',
+          buyer: 'buyer-alpha',
+          listing: {
+            ...listing,
+            assetAddress: 'mint-beta',
+          },
+          slug: 'alpha-dao',
+        }),
+        {
+          code: 'BAD_REQUEST',
+          message: 'Magic Eden listing is not valid for this community collection.',
+          status: 400,
+        },
+      )
+
+      const originalDateNow = Date.now
+
+      Date.now = () => listingExpiresAt + 1
+
+      try {
+        await expectORPCError(
+          communityRouter.prepareAssetMarketplaceBuy.callable(
+            createCallContext({
+              userId: 'viewer-user-id',
+              username: 'viewer',
+            }),
+          )({
+            assetGroupId: 'asset-group-alpha',
+            buyer: 'buyer-alpha',
+            listing,
+            slug: 'alpha-dao',
+          }),
+          {
+            code: 'BAD_REQUEST',
+            message: 'Magic Eden listing is not valid for this community collection.',
+            status: 400,
+          },
+        )
+      } finally {
+        Date.now = originalDateNow
+      }
+
+      const result = await communityRouter.prepareAssetMarketplaceBuy.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
+        }),
+      )({
+        assetGroupId: 'asset-group-alpha',
+        buyer: 'buyer-alpha',
+        listing,
+        slug: 'alpha-dao',
+      })
+
+      expect(result.listing).toEqual(listing)
+      expect(result.transaction).toEqual({
+        data: Buffer.from([1, 2, 3]).toString('base64'),
+        encoding: 'base64',
+      })
+      expect(requestedUrls).toHaveLength(2)
+      expect(requestedUrls[0]).toContain('/v2/collections/alpha-symbol/listings')
+      expect(requestedUrls[1]).toContain('/v2/instructions/buy_now')
+      expect(requestedUrls[1]).toContain('buyer=buyer-alpha')
+      expect(requestedUrls[1]).toContain('tokenATA=ata-alpha')
+      expect(requestedUrls[1]).toContain('tokenMint=mint-alpha')
+    } finally {
+      restoreFetch()
+      restoreMagicEdenApiKey()
+    }
+  })
+
+  test('refreshAssetMarketplaceAccess rejects unknown transaction signatures', async () => {
+    const restoreFetch = withFetch(async (_url, init) => {
+      const body = JSON.parse(String(init?.body)) as { method?: string }
+
+      expect(body.method).toBe('getSignatureStatuses')
+
+      return Response.json({
+        id: 'tokengator-asset-marketplace-refresh',
+        jsonrpc: '2.0',
+        result: {
+          value: [null],
+        },
+      })
+    })
+    const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
+
+    try {
+      await expectORPCError(
+        communityRouter.refreshAssetMarketplaceAccess.callable(
+          createCallContext({
+            userId: 'viewer-user-id',
+            username: 'viewer',
+          }),
+        )({
+          assetGroupId: 'asset-group-alpha',
+          signature: '1'.repeat(88),
+          slug: 'alpha-dao',
+        }),
+        {
+          code: 'BAD_REQUEST',
+          message: 'Purchase transaction signature was not found.',
+          status: 400,
+        },
+      )
+    } finally {
+      restoreFetch()
+      restoreMagicEdenApiKey()
+    }
+  })
+
+  test('refreshAssetMarketplaceAccess reports Solana RPC outages as server errors', async () => {
+    const restoreFetch = withFetch(async (_url, init) => {
+      const body = JSON.parse(String(init?.body)) as { method?: string }
+
+      expect(body.method).toBe('getSignatureStatuses')
+
+      return Response.json(
+        {
+          error: {
+            message: 'RPC unavailable.',
+          },
+        },
+        {
+          status: 503,
+        },
+      )
+    })
+    const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
+
+    try {
+      await expectORPCError(
+        communityRouter.refreshAssetMarketplaceAccess.callable(
+          createCallContext({
+            userId: 'viewer-user-id',
+            username: 'viewer',
+          }),
+        )({
+          assetGroupId: 'asset-group-alpha',
+          signature: '1'.repeat(88),
+          slug: 'alpha-dao',
+        }),
+        {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'RPC unavailable.',
+          status: 500,
+        },
+      )
+    } finally {
+      restoreFetch()
+      restoreMagicEdenApiKey()
+    }
+  })
+
+  test('Magic Eden client normalizes listings and buy transactions', async () => {
+    const { createMagicEdenClient } = await import('../src/features/community/data-access/magic-eden-client')
+    const authorizationHeaders: Array<string | null> = []
+    const timeoutSignals: boolean[] = []
+    const urls: string[] = []
+    const client = createMagicEdenClient({
+      apiKey: 'magic-eden-api-key',
+      baseUrl: 'https://api-mainnet.magiceden.dev',
+      fetch: async (input, init) => {
+        const url = String(input)
+
+        authorizationHeaders.push(new Headers(init?.headers).get('Authorization'))
+        timeoutSignals.push(init?.signal instanceof AbortSignal)
+        urls.push(url)
+
+        if (url.includes('/v2/collections/alpha-symbol/listings')) {
+          return Response.json([
+            {
+              pdaAddress: 'listing-blank-price',
+              price: '   ',
+              seller: 'seller-blank-price',
+              sellerExpiry: 0,
+              token: {
+                image: 'https://example.com/blank-price.png',
+                mintAddress: 'mint-blank-price',
+                name: 'Blank Price NFT',
+              },
+              tokenATA: 'ata-blank-price',
+            },
+            {
+              pdaAddress: 'listing-alpha',
+              price: 1.25,
+              seller: 'seller-alpha',
+              sellerExpiry: 0,
+              token: {
+                image: 'https://example.com/alpha.png',
+                mintAddress: 'mint-alpha',
+                name: 'Alpha NFT',
+              },
+              tokenATA: 'ata-alpha',
+            },
+          ])
+        }
+
+        return Response.json({
+          tx: {
+            data: [9, 9, 9],
+          },
+          txSigned: {
+            data: [1, 2, 3],
+          },
+        })
+      },
+    })
+
+    const listings = await client.listCollectionListings({
+      limit: 12,
+      symbolMagicEden: 'alpha-symbol',
+    })
+    const [listing] = listings
+
+    if (!listing) {
+      throw new Error('Expected Magic Eden listing fixture to normalize.')
+    }
+
+    expect(listings).toHaveLength(1)
+    expect(listing).toEqual({
+      assetAddress: 'mint-alpha',
+      auctionHouseAddress: null,
+      id: 'listing-alpha',
+      imageUrl: 'https://example.com/alpha.png',
+      name: 'Alpha NFT',
+      priceSol: 1.25,
+      seller: 'seller-alpha',
+      sellerExpiry: 0,
+      tokenAta: 'ata-alpha',
+    })
+
+    const transaction = await client.getBuyNowTransaction({
+      buyer: 'buyer-alpha',
+      listing,
+    })
+
+    expect(authorizationHeaders).toEqual(['Bearer magic-eden-api-key', 'Bearer magic-eden-api-key'])
+    expect(timeoutSignals).toEqual([true, true])
+    expect(transaction).toEqual({
+      data: Buffer.from([1, 2, 3]).toString('base64'),
+      encoding: 'base64',
+    })
+    expect(urls[1]).toContain('/v2/instructions/buy_now')
+    expect(urls[1]).toContain('buyer=buyer-alpha')
+    expect(urls[1]).toContain('tokenATA=ata-alpha')
+    expect(urls[1]).toContain('tokenMint=mint-alpha')
+  })
+
+  test('Magic Eden client maps timeout failures', async () => {
+    const { createMagicEdenClient } = await import('../src/features/community/data-access/magic-eden-client')
+    const timeoutError = new Error('Request timed out.')
+
+    timeoutError.name = 'TimeoutError'
+
+    const client = createMagicEdenClient({
+      apiKey: 'magic-eden-api-key',
+      baseUrl: 'https://api-mainnet.magiceden.dev',
+      fetch: async () => {
+        throw timeoutError
+      },
+    })
+
+    await expect(
+      client.listCollectionListings({
+        limit: 12,
+        symbolMagicEden: 'alpha-symbol',
+      }),
+    ).rejects.toThrow('Magic Eden request timed out.')
   })
 
   test('getBySlug returns not found for an unknown slug', async () => {

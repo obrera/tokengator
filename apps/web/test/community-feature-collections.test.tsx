@@ -8,6 +8,12 @@ let community: CommunityGetBySlugResult = {
   collections: [],
   id: 'org-1',
   logo: 'https://example.com/community.png',
+  marketplace: {
+    magicEden: {
+      enabled: false,
+      unavailableReason: 'api-key-missing',
+    },
+  },
   name: 'Alpha DAO',
   roles: [],
   slug: 'alpha-dao',
@@ -36,6 +42,7 @@ beforeAll(async () => {
   }))
 
   mock.module('../src/features/community/data-access/use-community-by-slug-query', () => ({
+    getCommunityBySlugQueryKey: (slug: string) => ['community', slug],
     useCommunityBySlugQuery: () => ({
       data: community,
     }),
@@ -54,6 +61,12 @@ describe('CommunityFeatureCollections', () => {
       collections: [],
       id: 'org-1',
       logo: 'https://example.com/community.png',
+      marketplace: {
+        magicEden: {
+          enabled: false,
+          unavailableReason: 'api-key-missing',
+        },
+      },
       name: 'Alpha DAO',
       roles: [],
       slug: 'alpha-dao',
@@ -74,6 +87,7 @@ describe('CommunityFeatureCollections', () => {
           id: 'collection-1',
           imageUrl: 'https://example.com/collection-alpha.png',
           label: 'Alpha Collection',
+          symbolMagicEden: null,
           type: 'collection',
         },
         {
@@ -82,11 +96,18 @@ describe('CommunityFeatureCollections', () => {
           id: 'collection-2',
           imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-2',
           label: 'Beta Collection',
+          symbolMagicEden: null,
           type: 'collection',
         },
       ],
       id: 'org-1',
       logo: 'https://example.com/community.png',
+      marketplace: {
+        magicEden: {
+          enabled: false,
+          unavailableReason: 'api-key-missing',
+        },
+      },
       name: 'Alpha DAO',
       roles: [],
       slug: 'alpha-dao',

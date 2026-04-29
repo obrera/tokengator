@@ -1,0 +1,77 @@
+import type { CommunityGetBySlugResult, CommunityRoleAssetGroupEntity } from './community.entity'
+import { communityGetBySlugForUser } from './community-get-by-slug-for-user'
+
+type CommunityMarketplaceCollectionLookup =
+  | {
+      assetGroup: CommunityRoleAssetGroupEntity
+      community: CommunityGetBySlugResult
+      status: 'ok'
+    }
+  | {
+      assetGroup: CommunityRoleAssetGroupEntity | null
+      community: CommunityGetBySlugResult | null
+      message: string
+      status: 'collection-not-found' | 'community-not-found' | 'purchase-unavailable'
+    }
+
+export async function communityGetMarketplaceCollectionForUser(input: {
+  assetGroupId: string
+  slug: string
+  userId: string
+}): Promise<CommunityMarketplaceCollectionLookup> {
+  const community = await communityGetBySlugForUser({
+    slug: input.slug,
+    userId: input.userId,
+  })
+
+  if (!community) {
+    return {
+      assetGroup: null,
+      community: null,
+      message: 'Community not found.',
+      status: 'community-not-found',
+    }
+  }
+
+  const assetGroup =
+    community.roles
+      .flatMap((role) => role.assetGroups)
+      .find((entry) => entry.id === input.assetGroupId && entry.type === 'collection') ?? null
+
+  if (!assetGroup) {
+    return {
+      assetGroup: null,
+      community,
+      message: 'Community collection not found.',
+      status: 'collection-not-found',
+    }
+  }
+
+  if (!assetGroup.symbolMagicEden) {
+    return {
+      assetGroup,
+      community,
+      message: 'This community collection is missing a Magic Eden symbol.',
+      status: 'purchase-unavailable',
+    }
+  }
+
+  const enabledRoleMarketplace = community.roles.some(
+    (role) => role.assetMarketplace.enabled && role.assetMarketplace.assetGroupId === assetGroup.id,
+  )
+
+  if (!enabledRoleMarketplace) {
+    return {
+      assetGroup,
+      community,
+      message: 'This community collection is not available for marketplace purchases.',
+      status: 'purchase-unavailable',
+    }
+  }
+
+  return {
+    assetGroup,
+    community,
+    status: 'ok',
+  }
+}

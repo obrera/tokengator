@@ -74,6 +74,7 @@ type CommunityRoleConditionRecord = {
   assetGroupId: string
   assetGroupLabel: string
   assetGroupResolverKind: ResolverKind
+  assetGroupSymbolMagicEden?: string | null
   assetGroupType: 'collection' | 'mint'
   id: string
   maximumAmount: string | null
@@ -516,6 +517,7 @@ export async function listCommunityRoleRecords(
         assetGroupId: communityRoleCondition.assetGroupId,
         assetGroupLabel: assetGroup.label,
         assetGroupResolverKind: assetGroup.resolverKind,
+        assetGroupSymbolMagicEden: assetGroup.symbolMagicEden,
         assetGroupType: assetGroup.type,
         communityRoleId: communityRoleCondition.communityRoleId,
         id: communityRoleCondition.id,
@@ -553,6 +555,7 @@ export async function listCommunityRoleRecords(
         assetGroupId: condition.assetGroupId,
         assetGroupLabel: condition.assetGroupLabel,
         assetGroupResolverKind: condition.assetGroupResolverKind,
+        assetGroupSymbolMagicEden: condition.assetGroupSymbolMagicEden,
         assetGroupType: condition.assetGroupType,
         id: condition.id,
         maximumAmount: condition.maximumAmount,

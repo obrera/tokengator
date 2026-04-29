@@ -42,6 +42,7 @@ export function AdminAssetFeatureGroupSettings(props: AdminAssetFeatureGroupSett
               label: assetGroup.data.label,
               resolverKind: assetGroup.data.resolverKind,
               symbol: assetGroup.data.symbol,
+              symbolMagicEden: assetGroup.data.symbolMagicEden,
               type: assetGroup.data.type,
             }}
             isPending={updateAssetGroup.isPending}

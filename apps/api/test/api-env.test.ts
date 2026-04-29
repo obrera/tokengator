@@ -18,6 +18,8 @@ const API_ENV_KEYS = [
   'HELIUS_CLUSTER',
   'LOG_DEBUG_CATEGORIES',
   'LOG_JSON',
+  'MAGIC_EDEN_API_KEY',
+  'MAGIC_EDEN_LISTING_SECRET',
   'NODE_ENV',
   'PORT',
   'SCHEDULER_START',
@@ -86,6 +88,22 @@ describe('api env', () => {
       const { env } = await import(`@tokengator/env/api?test=${Date.now()}-app-api-port`)
 
       expect(env.API_PORT).toBe(4200)
+    } finally {
+      restoreEnv()
+    }
+  })
+
+  test('keeps MAGIC_EDEN_API_KEY and MAGIC_EDEN_LISTING_SECRET optional in the app env schema', async () => {
+    const restoreEnv = withApiEnv({
+      MAGIC_EDEN_API_KEY: undefined,
+      MAGIC_EDEN_LISTING_SECRET: undefined,
+    })
+
+    try {
+      const { env } = await import(`@tokengator/env/api?test=${Date.now()}-app-magic-eden-optional`)
+
+      expect(env.MAGIC_EDEN_API_KEY).toBeUndefined()
+      expect(env.MAGIC_EDEN_LISTING_SECRET).toBeUndefined()
     } finally {
       restoreEnv()
     }

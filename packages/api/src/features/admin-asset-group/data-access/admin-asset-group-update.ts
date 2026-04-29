@@ -32,6 +32,10 @@ export async function adminAssetGroupUpdate(input: {
     input.data.imageUrl === undefined ? input.existingAssetGroup.imageUrl : normalizeOptionalString(input.data.imageUrl)
   const symbol =
     input.data.symbol === undefined ? input.existingAssetGroup.symbol : normalizeOptionalString(input.data.symbol)
+  const symbolMagicEden =
+    input.data.symbolMagicEden === undefined
+      ? input.existingAssetGroup.symbolMagicEden
+      : normalizeOptionalString(input.data.symbolMagicEden)
   const resolverKind =
     input.data.resolverKind === undefined
       ? isAdminAssetGroupResolverKindCompatible({
@@ -55,6 +59,7 @@ export async function adminAssetGroupUpdate(input: {
       label: input.data.label,
       resolverKind,
       symbol,
+      symbolMagicEden,
       type: input.data.type,
       updatedAt,
     })
@@ -69,6 +74,7 @@ export async function adminAssetGroupUpdate(input: {
     label: input.data.label,
     resolverKind,
     symbol,
+    symbolMagicEden,
     type: input.data.type,
     updatedAt,
   }

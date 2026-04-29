@@ -35,6 +35,8 @@ export const env = createEnv({
     HELIUS_CLUSTER: z.enum(['devnet', 'mainnet']),
     LOG_DEBUG_CATEGORIES: logDebugCategoriesSchema,
     LOG_JSON: createEnvBooleanSchema(),
+    MAGIC_EDEN_API_KEY: z.string().min(1).optional(),
+    MAGIC_EDEN_LISTING_SECRET: z.string().min(32).optional(),
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     SCHEDULED_DISCORD_SYNC_INTERVAL_MINUTES: createPositiveIntegerSchema(1),
     SCHEDULED_INDEX_INTERVAL_MINUTES: createPositiveIntegerSchema(30),

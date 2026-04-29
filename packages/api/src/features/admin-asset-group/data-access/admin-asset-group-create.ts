@@ -31,6 +31,7 @@ export async function adminAssetGroupCreate(input: AdminAssetGroupCreateInput) {
     label: input.label,
     resolverKind,
     symbol: normalizeOptionalString(input.symbol),
+    symbolMagicEden: normalizeOptionalString(input.symbolMagicEden),
     type: input.type,
     updatedAt: now,
   })

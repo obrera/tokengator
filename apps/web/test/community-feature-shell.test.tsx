@@ -8,6 +8,12 @@ const community = {
   collections: [],
   id: 'org-1',
   logo: 'https://example.com/community.png',
+  marketplace: {
+    magicEden: {
+      enabled: false,
+      unavailableReason: 'api-key-missing',
+    },
+  },
   name: 'Alpha DAO',
   roles: [],
   slug: 'alpha-dao',

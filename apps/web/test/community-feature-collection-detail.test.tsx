@@ -15,11 +15,18 @@ describe('CommunityFeatureCollectionDetail', () => {
           id: 'collection-1',
           imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-1',
           label: 'Alpha Collection',
+          symbolMagicEden: null,
           type: 'collection',
         },
       ],
       id: 'org-1',
       logo: null,
+      marketplace: {
+        magicEden: {
+          enabled: false,
+          unavailableReason: 'api-key-missing',
+        },
+      },
       name: 'Alpha DAO',
       roles: [],
       slug: 'alpha-dao',

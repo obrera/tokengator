@@ -14,6 +14,7 @@ export const adminAssetGroupEntityColumns = {
   label: assetGroup.label,
   resolverKind: assetGroup.resolverKind,
   symbol: assetGroup.symbol,
+  symbolMagicEden: assetGroup.symbolMagicEden,
   type: assetGroup.type,
   updatedAt: assetGroup.updatedAt,
 }
