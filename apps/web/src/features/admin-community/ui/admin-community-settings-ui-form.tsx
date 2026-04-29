@@ -3,11 +3,20 @@ import { type SubmitEvent, useEffect, useState } from 'react'
 import { Button } from '@tokengator/ui/components/button'
 import { Input } from '@tokengator/ui/components/input'
 import { Label } from '@tokengator/ui/components/label'
+import { Textarea } from '@tokengator/ui/components/textarea'
+
+const communityDescriptionMaxLength = 256
 
 export interface AdminCommunitySettingsUiFormValues {
+  description: string
+  discordUrl: string
+  githubUrl: string
   logo: string
   name: string
   slug: string
+  telegramUrl: string
+  websiteUrl: string
+  xUrl: string
 }
 
 interface AdminCommunitySettingsUiFormProps {
@@ -22,7 +31,17 @@ export function AdminCommunitySettingsUiForm(props: AdminCommunitySettingsUiForm
 
   useEffect(() => {
     setFormValues(initialValues)
-  }, [initialValues.logo, initialValues.name, initialValues.slug])
+  }, [
+    initialValues.description,
+    initialValues.discordUrl,
+    initialValues.githubUrl,
+    initialValues.logo,
+    initialValues.name,
+    initialValues.slug,
+    initialValues.telegramUrl,
+    initialValues.websiteUrl,
+    initialValues.xUrl,
+  ])
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -70,6 +89,96 @@ export function AdminCommunitySettingsUiForm(props: AdminCommunitySettingsUiForm
             }))
           }
           value={formValues.logo}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="organization-detail-description">Description</Label>
+        <Textarea
+          id="organization-detail-description"
+          maxLength={communityDescriptionMaxLength}
+          onChange={(event) =>
+            setFormValues((currentValues) => ({
+              ...currentValues,
+              description: event.target.value,
+            }))
+          }
+          rows={3}
+          value={formValues.description}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="organization-detail-discord-url">Discord URL</Label>
+        <Input
+          id="organization-detail-discord-url"
+          onChange={(event) =>
+            setFormValues((currentValues) => ({
+              ...currentValues,
+              discordUrl: event.target.value,
+            }))
+          }
+          placeholder="https://discord.gg/example"
+          type="url"
+          value={formValues.discordUrl}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="organization-detail-github-url">GitHub URL</Label>
+        <Input
+          id="organization-detail-github-url"
+          onChange={(event) =>
+            setFormValues((currentValues) => ({
+              ...currentValues,
+              githubUrl: event.target.value,
+            }))
+          }
+          placeholder="https://github.com/example"
+          type="url"
+          value={formValues.githubUrl}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="organization-detail-telegram-url">Telegram URL</Label>
+        <Input
+          id="organization-detail-telegram-url"
+          onChange={(event) =>
+            setFormValues((currentValues) => ({
+              ...currentValues,
+              telegramUrl: event.target.value,
+            }))
+          }
+          placeholder="https://t.me/example"
+          type="url"
+          value={formValues.telegramUrl}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="organization-detail-website-url">Website URL</Label>
+        <Input
+          id="organization-detail-website-url"
+          onChange={(event) =>
+            setFormValues((currentValues) => ({
+              ...currentValues,
+              websiteUrl: event.target.value,
+            }))
+          }
+          placeholder="https://example.com"
+          type="url"
+          value={formValues.websiteUrl}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="organization-detail-x-url">X URL</Label>
+        <Input
+          id="organization-detail-x-url"
+          onChange={(event) =>
+            setFormValues((currentValues) => ({
+              ...currentValues,
+              xUrl: event.target.value,
+            }))
+          }
+          placeholder="https://x.com/example"
+          type="url"
+          value={formValues.xUrl}
         />
       </div>
       <div className="flex justify-end">

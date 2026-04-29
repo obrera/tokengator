@@ -13,6 +13,7 @@ import type {
 
 const organization = {
   createdAt: new Date('2026-04-02T12:00:00.000Z'),
+  description: null,
   discordConnection: {
     diagnostics: {
       checks: [],
@@ -37,6 +38,8 @@ const organization = {
     roleSyncEnabled: false,
     status: 'connected' as const,
   },
+  discordUrl: null,
+  githubUrl: null,
   id: 'org-1',
   logo: null,
   memberCount: 0,
@@ -45,6 +48,9 @@ const organization = {
   name: 'Acme',
   owners: [],
   slug: 'acme',
+  telegramUrl: null,
+  websiteUrl: null,
+  xUrl: null,
 } satisfies AdminOrganizationDetailEntity
 
 const discordGuildRolesResult = {

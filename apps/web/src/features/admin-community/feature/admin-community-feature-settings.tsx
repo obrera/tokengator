@@ -19,9 +19,15 @@ export function AdminCommunityFeatureSettings(props: AdminCommunityFeatureSettin
     try {
       await updateCommunity.mutateAsync({
         data: {
+          description: values.description,
+          discordUrl: values.discordUrl,
+          githubUrl: values.githubUrl,
           logo: values.logo || undefined,
           name: values.name,
           slug: values.slug,
+          telegramUrl: values.telegramUrl,
+          websiteUrl: values.websiteUrl,
+          xUrl: values.xUrl,
         },
         organizationId: organization.id,
       })
@@ -36,14 +42,20 @@ export function AdminCommunityFeatureSettings(props: AdminCommunityFeatureSettin
     <Card>
       <CardHeader>
         <CardTitle>Community Details</CardTitle>
-        <CardDescription>Edit the core community fields.</CardDescription>
+        <CardDescription>Edit the community details.</CardDescription>
       </CardHeader>
       <CardContent>
         <AdminCommunitySettingsUiForm
           initialValues={{
+            description: organization.description ?? '',
+            discordUrl: organization.discordUrl ?? '',
+            githubUrl: organization.githubUrl ?? '',
             logo: organization.logo ?? '',
             name: organization.name,
             slug: organization.slug,
+            telegramUrl: organization.telegramUrl ?? '',
+            websiteUrl: organization.websiteUrl ?? '',
+            xUrl: organization.xUrl ?? '',
           }}
           isPending={updateCommunity.isPending}
           onSubmit={handleSaveCommunity}

@@ -8,11 +8,17 @@ import { adminOrganizationHasOwnerRole } from '../util/admin-organization-owner-
 
 export const adminOrganizationEntityColumns = {
   createdAt: organization.createdAt,
+  description: organization.description,
+  discordUrl: organization.discordUrl,
+  githubUrl: organization.githubUrl,
   id: organization.id,
   logo: organization.logo,
   metadata: organization.metadata,
   name: organization.name,
   slug: organization.slug,
+  telegramUrl: organization.telegramUrl,
+  websiteUrl: organization.websiteUrl,
+  xUrl: organization.xUrl,
 }
 
 export const adminOrganizationMemberEntityColumns = {

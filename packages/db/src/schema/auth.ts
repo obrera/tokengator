@@ -1,5 +1,7 @@
 import { relations, sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+
+const COMMUNITY_DESCRIPTION_MAX_LENGTH = 256
 
 export const identityProviderValues = ['discord', 'solana'] as const
 export type IdentityProvider = (typeof identityProviderValues)[number]
@@ -35,13 +37,22 @@ export const organization = sqliteTable(
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
+    description: text('description', { length: COMMUNITY_DESCRIPTION_MAX_LENGTH }),
+    discordUrl: text('discord_url'),
+    githubUrl: text('github_url'),
     id: text('id').primaryKey(),
     logo: text('logo'),
     metadata: text('metadata'),
     name: text('name').notNull(),
     slug: text('slug').notNull().unique(),
+    telegramUrl: text('telegram_url'),
+    websiteUrl: text('website_url'),
+    xUrl: text('x_url'),
   },
-  (table) => [index('organization_slug_idx').on(table.slug)],
+  (table) => [
+    check('organization_description_length_check', sql`length(${table.description}) <= 256`),
+    index('organization_slug_idx').on(table.slug),
+  ],
 )
 
 export const session = sqliteTable(

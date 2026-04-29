@@ -141,6 +141,9 @@ const devBobUser = getRequiredDevSeedUser(bob.username)
 const devCarolUser = getRequiredDevSeedUser('carol')
 const devSeedOrganizations = [
   {
+    description: 'Acme is a demo collector community for testing gated roles, member management, and admin settings.',
+    discordUrl: 'https://discord.gg/acme',
+    githubUrl: 'https://github.com/tokengator/acme-demo',
     logo: 'https://api.dicebear.com/9.x/identicon/png?seed=acme',
     members: [
       {
@@ -155,8 +158,14 @@ const devSeedOrganizations = [
     metadata: createSeedOrganizationMetadata('acme'),
     name: 'Acme',
     slug: 'acme',
+    telegramUrl: 'https://t.me/acme_demo',
+    websiteUrl: 'https://acme.example.com',
+    xUrl: 'https://x.com/acme_demo',
   },
   {
+    description: 'Beacon is a seeded community used to exercise optional profile links across the admin experience.',
+    discordUrl: 'https://discord.gg/beacon',
+    githubUrl: 'https://github.com/tokengator/beacon-demo',
     logo: 'https://api.dicebear.com/9.x/identicon/png?seed=beacon',
     members: [
       {
@@ -171,6 +180,9 @@ const devSeedOrganizations = [
     metadata: createSeedOrganizationMetadata('beacon'),
     name: 'Beacon',
     slug: 'beacon',
+    telegramUrl: 'https://t.me/beacon_demo',
+    websiteUrl: 'https://beacon.example.com',
+    xUrl: 'https://x.com/beacon_demo',
   },
 ].sort((left, right) => left.slug.localeCompare(right.slug))
 const primaryDevSeedOrganization = devSeedOrganizations.find(
@@ -365,11 +377,17 @@ async function createSeedOrganizations(db: RuntimeModules['db'], usersByEmail: M
     })
 
     await db.insert(authSchema.organization).values({
+      description: organization.description,
+      discordUrl: organization.discordUrl,
+      githubUrl: organization.githubUrl,
       id: organizationId,
       logo: organization.logo,
       metadata: organization.metadata,
       name: organization.name,
       slug: organization.slug,
+      telegramUrl: organization.telegramUrl,
+      websiteUrl: organization.websiteUrl,
+      xUrl: organization.xUrl,
     })
     await db.insert(authSchema.member).values(membershipValues)
 

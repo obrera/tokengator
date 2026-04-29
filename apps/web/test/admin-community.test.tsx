@@ -5,9 +5,13 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import type { AdminOrganizationDetailEntity, AdminOrganizationListEntity } from '@tokengator/sdk'
 
 import { AdminCommunityDirectoryUiList } from '../src/features/admin-community/ui/admin-community-directory-ui-list'
+import { AdminCommunitySettingsUiForm } from '../src/features/admin-community/ui/admin-community-settings-ui-form'
 
 const directoryOrganization = {
   createdAt: new Date('2024-01-02T00:00:00.000Z'),
+  description: null,
+  discordUrl: null,
+  githubUrl: null,
   id: 'org-1',
   logo: 'https://example.com/community.png',
   memberCount: 3,
@@ -21,11 +25,17 @@ const directoryOrganization = {
     },
   ],
   slug: 'alpha-dao',
+  telegramUrl: null,
+  websiteUrl: null,
+  xUrl: null,
 } satisfies AdminOrganizationListEntity
 
 const detailOrganization = {
   createdAt: new Date('2024-01-02T00:00:00.000Z'),
+  description: 'Alpha community profile',
   discordConnection: null,
+  discordUrl: 'https://discord.gg/alpha',
+  githubUrl: 'https://github.com/alpha',
   id: 'org-1',
   logo: 'https://example.com/community.png',
   memberCount: 3,
@@ -40,6 +50,9 @@ const detailOrganization = {
     },
   ],
   slug: 'alpha-dao',
+  telegramUrl: 'https://t.me/alpha',
+  websiteUrl: 'https://alpha.example.com',
+  xUrl: 'https://x.com/alpha',
 } satisfies AdminOrganizationDetailEntity
 
 let AdminCommunityFeatureShell: typeof import('../src/features/admin-community/feature/admin-community-feature-shell').AdminCommunityFeatureShell
@@ -98,5 +111,39 @@ describe('admin community UI', () => {
     expect(markup).toContain('@alpha-dao')
     expect(markup).toContain('Overview')
     expect(markup).toContain('Overview content')
+  })
+
+  test('renders optional community profile fields in the settings form', () => {
+    const markup = renderToStaticMarkup(
+      <AdminCommunitySettingsUiForm
+        initialValues={{
+          description: 'Alpha community profile',
+          discordUrl: 'https://discord.gg/alpha',
+          githubUrl: 'https://github.com/alpha',
+          logo: 'https://example.com/community.png',
+          name: 'Alpha DAO',
+          slug: 'alpha-dao',
+          telegramUrl: 'https://t.me/alpha',
+          websiteUrl: 'https://alpha.example.com',
+          xUrl: 'https://x.com/alpha',
+        }}
+        isPending={false}
+        onSubmit={async () => true}
+      />,
+    )
+
+    expect(markup).toContain('Description')
+    expect(markup).toContain('Discord URL')
+    expect(markup).toContain('GitHub URL')
+    expect(markup).toContain('maxLength="256"')
+    expect(markup).toContain('Telegram URL')
+    expect(markup).toContain('Website URL')
+    expect(markup).toContain('X URL')
+    expect(markup).toContain('Alpha community profile')
+    expect(markup).toContain('value="https://discord.gg/alpha"')
+    expect(markup).toContain('value="https://github.com/alpha"')
+    expect(markup).toContain('value="https://t.me/alpha"')
+    expect(markup).toContain('value="https://alpha.example.com"')
+    expect(markup).toContain('value="https://x.com/alpha"')
   })
 })

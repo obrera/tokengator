@@ -8,6 +8,12 @@ import type { AdminOrganizationUpdateInput } from './admin-organization-update-i
 import { adminOrganizationGet } from './admin-organization-get'
 import { adminOrganizationRecordGet } from './admin-organization-record-get'
 
+function normalizeOptionalText(value?: string) {
+  const trimmedValue = value?.trim()
+
+  return trimmedValue ? trimmedValue : null
+}
+
 export async function adminOrganizationUpdate(input: AdminOrganizationUpdateInput) {
   const existingOrganization = await adminOrganizationRecordGet(input.organizationId)
 
@@ -37,9 +43,15 @@ export async function adminOrganizationUpdate(input: AdminOrganizationUpdateInpu
   await db
     .update(organization)
     .set({
+      description: normalizeOptionalText(input.data.description),
+      discordUrl: normalizeOptionalText(input.data.discordUrl),
+      githubUrl: normalizeOptionalText(input.data.githubUrl),
       logo: adminOrganizationNormalizeLogo(input.data.logo),
       name: input.data.name,
       slug: input.data.slug,
+      telegramUrl: normalizeOptionalText(input.data.telegramUrl),
+      websiteUrl: normalizeOptionalText(input.data.websiteUrl),
+      xUrl: normalizeOptionalText(input.data.xUrl),
     })
     .where(eq(organization.id, input.organizationId))
 
