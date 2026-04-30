@@ -40,5 +40,5 @@
     "builtin": true
   },
   "globals": {},
-  "ignorePatterns": []
+  "ignorePatterns": ["packages/cli/src/api/generated/**"]
 }

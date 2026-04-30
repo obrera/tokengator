@@ -1,3 +1,5 @@
+export { AdminApiError, createAdminApiClient } from './api/data-access/admin-api-client'
+export type { AdminApiClient, AdminApiFetch } from './api/data-access/admin-api-client'
 export { AuthError } from './auth/data-access/auth-api-client'
 export { getAuthenticatedHeaders } from './auth/data-access/auth-token-store'
 export {

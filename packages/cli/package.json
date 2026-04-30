@@ -27,6 +27,7 @@
     "build": "tsdown",
     "check-types": "tsc -b --noEmit",
     "dev": "bun run ./src/cli.ts",
+    "generate:api": "bun run ./scripts/generate-api-client.ts",
     "pack:npm": "bun pm pack --quiet --destination \"${PACK_DEST:-.}\"",
     "test": "bun test ./test"
   },
@@ -40,6 +41,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@hey-api/client-fetch": "0.13.1",
+    "@hey-api/openapi-ts": "0.82.4",
     "@tokengator/config": "workspace:*",
     "@types/bun": "catalog:",
     "tsdown": "catalog:",

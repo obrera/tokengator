@@ -1,8 +1,9 @@
 import { join } from 'node:path'
 import { createTanStackStartBunServeConfig } from 'tanstack-start-bun-server'
 import { createApiApp } from '@tokengator/api/app'
+import { writeOpenApiDocument } from '@tokengator/api/write-openapi-document'
 import { env } from '@tokengator/env/api'
-import { configureAppLogger, getAppLogger } from '@tokengator/logger'
+import { configureAppLogger, formatLogError, getAppLogger } from '@tokengator/logger'
 import { startApiDiscordBot } from './start-discord-bot'
 import { startApiScheduledJobs } from './start-scheduled-jobs'
 
@@ -11,6 +12,14 @@ const logger = getAppLogger('api', 'api-server')
 const app = createApiApp()
 
 async function main() {
+  if (env.NODE_ENV === 'development') {
+    void writeOpenApiDocument().catch((error) => {
+      logger.error('Failed to write OpenAPI document: {error}', {
+        error: formatLogError(error),
+      })
+    })
+  }
+
   await startApiDiscordBot()
   startApiScheduledJobs()
 

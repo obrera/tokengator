@@ -3,8 +3,11 @@
 import { Command } from 'commander'
 import pc from 'picocolors'
 import packageJson from '../package.json'
+import { AdminApiError } from './api/data-access/admin-api-client'
+import { createAssetGroupsCommand } from './asset-groups/asset-groups-command'
 import { createAuthCommand } from './auth/auth-command'
 import { AuthError } from './auth/data-access/auth-api-client'
+import { createCommunitiesCommand } from './communities/communities-command'
 import { createConfigCommand } from './config/config-command'
 
 function createProgram(): Command {
@@ -16,7 +19,9 @@ function createProgram(): Command {
       program.outputHelp()
     })
 
+  program.addCommand(createAssetGroupsCommand())
   program.addCommand(createAuthCommand())
+  program.addCommand(createCommunitiesCommand())
   program.addCommand(createConfigCommand())
 
   return program
@@ -31,7 +36,7 @@ function printCliError(error: unknown) {
 
   console.error(pc.red(message))
 
-  if (error instanceof AuthError && error.details?.length) {
+  if ((error instanceof AdminApiError || error instanceof AuthError) && error.details?.length) {
     for (const detail of error.details) {
       console.error(pc.dim(detail))
     }
