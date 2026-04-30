@@ -83,6 +83,11 @@ describe('CommunityFeatureCollections', () => {
       collections: [
         {
           address: 'collection-alpha',
+          assetMarketplace: {
+            assetGroupId: 'collection-1',
+            enabled: false,
+            unavailableReason: 'api-key-missing',
+          },
           facetTotals: {},
           id: 'collection-1',
           imageUrl: 'https://example.com/collection-alpha.png',
@@ -92,6 +97,11 @@ describe('CommunityFeatureCollections', () => {
         },
         {
           address: 'collection-beta',
+          assetMarketplace: {
+            assetGroupId: 'collection-2',
+            enabled: false,
+            unavailableReason: 'api-key-missing',
+          },
           facetTotals: {},
           id: 'collection-2',
           imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-2',

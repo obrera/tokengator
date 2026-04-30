@@ -8,7 +8,7 @@ const communityAssetMarketplaceListingInputSchema = z.object({
   name: z.string().trim().nullable(),
   priceSol: z.number().positive(),
   seller: z.string().trim().min(1),
-  sellerExpiry: z.number().int().nonnegative(),
+  sellerExpiry: z.number().int().min(-1),
   tokenAta: z.string().trim().min(1),
   verification: z.string().trim().min(1),
 })

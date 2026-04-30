@@ -80,7 +80,7 @@ describe('collection route preload', () => {
     expect(ensureQueryData).toHaveBeenCalledTimes(1)
   })
 
-  test('skips collection asset preload for analytics tabs', async () => {
+  test('skips collection asset preload for non-assets tabs', async () => {
     const ensureQueryData = mock(async () => {
       throw new Error('Collection assets should not be preloaded.')
     })
@@ -94,6 +94,32 @@ describe('collection route preload', () => {
         },
         location: {
           pathname: '/communities/acme/collections/collection-alpha/insights',
+        },
+        params: {
+          address: 'collection-alpha',
+          slug: 'acme',
+        },
+        search: {
+          facets: undefined,
+          grid: 8,
+          owner: undefined,
+          query: undefined,
+        },
+      } as never),
+    ).resolves.toEqual({
+      collectionAssets: null,
+    })
+    expect(ensureQueryData).not.toHaveBeenCalled()
+
+    await expect(
+      CollectionRoute.options.beforeLoad?.({
+        context: {
+          queryClient: {
+            ensureQueryData,
+          },
+        },
+        location: {
+          pathname: '/communities/acme/collections/collection-alpha/marketplace',
         },
         params: {
           address: 'collection-alpha',

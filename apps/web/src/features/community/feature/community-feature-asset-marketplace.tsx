@@ -1,27 +1,24 @@
 import { getBase58Decoder } from '@solana/kit'
+import { Link } from '@tanstack/react-router'
 import { useSignAndSendTransaction, useWalletUi, type UiWalletAccount } from '@wallet-ui/react'
 import { ArrowLeft, Loader2, ShoppingCart } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import type { CommunityGetBySlugResult } from '@tokengator/sdk'
 import { WalletDropdown } from '@tokengator/wallet-ui'
 
-import { SolanaProvider } from '@/lib/solana-provider'
 import { Route as RootRoute } from '@/routes/__root'
 
 import { Button } from '@tokengator/ui/components/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@tokengator/ui/components/dialog'
 
 import { useCommunityAssetMarketplaceAccessRefresh } from '../data-access/use-community-asset-marketplace-access-refresh'
 import { useCommunityAssetMarketplaceBuyPrepare } from '../data-access/use-community-asset-marketplace-buy-prepare'
 import { useCommunityAssetMarketplaceListingsQuery } from '../data-access/use-community-asset-marketplace-listings-query'
+import {
+  type CommunityAssetMarketplaceAssetGroup,
+  type CommunityCollectionAssetMarketplaceAvailability,
+  type CommunityMarketplaceAvailability,
+  isCommunityAssetMarketplaceEnabled,
+} from '../util/community-asset-marketplace'
 
 type CommunityAssetMarketplaceListing = {
   assetAddress: string
@@ -35,10 +32,6 @@ type CommunityAssetMarketplaceListing = {
   tokenAta: string
   verification: string
 }
-type CommunityAssetMarketplaceAssetGroup = CommunityGetBySlugResult['roles'][number]['assetGroups'][number]
-type CommunityMarketplaceAvailability = CommunityGetBySlugResult['marketplace']
-type CommunityRoleAssetMarketplaceAvailability = CommunityGetBySlugResult['roles'][number]['assetMarketplace']
-
 function decodeBase64Transaction(data: string) {
   const binary = atob(data)
   const bytes = new Uint8Array(binary.length)
@@ -175,6 +168,7 @@ function CommunityFeatureAssetMarketplaceConnected({
       className="w-full gap-2"
       disabled={!isLinkedWallet || !listing || isPending}
       onClick={() => void buyListing()}
+      size="lg"
     >
       {isPending ? <Loader2 className="size-4 animate-spin" /> : <ShoppingCart className="size-4" />}
       {isPending ? 'Buying...' : 'Buy NFT'}
@@ -268,17 +262,15 @@ function CommunityFeatureAssetMarketplaceListingDetail({
   )
 }
 
-function CommunityFeatureAssetMarketplaceDialog({
+export function CommunityFeatureAssetMarketplaceBrowser({
   assetGroup,
   assetMarketplace,
-  onOpenChange,
-  open,
+  enabled = true,
   slug,
 }: {
   assetGroup: CommunityAssetMarketplaceAssetGroup
-  assetMarketplace: CommunityRoleAssetMarketplaceAvailability
-  onOpenChange: (open: boolean) => void
-  open: boolean
+  assetMarketplace: CommunityCollectionAssetMarketplaceAvailability
+  enabled?: boolean
   slug: string
 }) {
   const { account } = useWalletUi()
@@ -291,7 +283,7 @@ function CommunityFeatureAssetMarketplaceDialog({
   const isLinkedWallet = Boolean(account && linkedWalletAddresses.has(account.address))
   const listings = useCommunityAssetMarketplaceListingsQuery({
     assetGroupId: assetGroup.id,
-    enabled: open && assetMarketplace.enabled,
+    enabled: enabled && assetMarketplace.enabled,
     limit: 100,
     slug,
   })
@@ -325,48 +317,32 @@ function CommunityFeatureAssetMarketplaceDialog({
     </div>
   )
 
-  return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogTrigger render={<Button className="w-full gap-2" size="sm" variant="outline" />}>
-        <ShoppingCart className="size-4" />
-        Buy NFT
-      </DialogTrigger>
-      <DialogContent className="grid h-[calc(100vh-2rem)] max-h-[840px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Buy {assetGroup.label}</DialogTitle>
-          <DialogDescription>{assetGroup.label} listings on Magic Eden.</DialogDescription>
-        </DialogHeader>
+  if (previewListing) {
+    return (
+      <CommunityFeatureAssetMarketplaceListingDetail
+        buyAction={buyAction}
+        listing={previewListing}
+        onBack={() => setPreviewListingId(null)}
+        walletAction={walletAction}
+      />
+    )
+  }
 
-        <div className="min-h-0 overflow-y-auto pr-1">
-          {previewListing ? (
-            <CommunityFeatureAssetMarketplaceListingDetail
-              buyAction={buyAction}
-              listing={previewListing}
-              onBack={() => setPreviewListingId(null)}
-              walletAction={walletAction}
-            />
-          ) : (
-            <div className="grid gap-3">
-              {listings.isPending ? <p className="text-muted-foreground text-sm">Loading listings...</p> : null}
-              {listings.isError ? (
-                <p className="text-destructive text-sm">
-                  {listings.error instanceof Error ? listings.error.message : 'Unable to load listings.'}
-                </p>
-              ) : null}
-              {listings.data?.listings.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No listings available.</p>
-              ) : null}
-              {listings.data?.listings.length ? (
-                <CommunityFeatureAssetMarketplaceGrid
-                  listings={listings.data.listings}
-                  onListingSelect={setPreviewListingId}
-                />
-              ) : null}
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+  return (
+    <div className="grid gap-3">
+      {listings.isPending ? <p className="text-muted-foreground text-sm">Loading listings...</p> : null}
+      {listings.isError ? (
+        <p className="text-destructive text-sm">
+          {listings.error instanceof Error ? listings.error.message : 'Unable to load listings.'}
+        </p>
+      ) : null}
+      {listings.data?.listings.length === 0 ? (
+        <p className="text-muted-foreground text-sm">No listings available.</p>
+      ) : null}
+      {listings.data?.listings.length ? (
+        <CommunityFeatureAssetMarketplaceGrid listings={listings.data.listings} onListingSelect={setPreviewListingId} />
+      ) : null}
+    </div>
   )
 }
 
@@ -377,31 +353,38 @@ export function CommunityFeatureAssetMarketplace({
   slug,
 }: {
   assetGroup: CommunityAssetMarketplaceAssetGroup
-  assetMarketplace: CommunityRoleAssetMarketplaceAvailability | null
+  assetMarketplace: CommunityCollectionAssetMarketplaceAvailability | null
   marketplace: CommunityMarketplaceAvailability
   slug: string
 }) {
-  const [open, setOpen] = useState(false)
-
-  if (
-    assetGroup.type !== 'collection' ||
-    !assetGroup.symbolMagicEden ||
-    !assetMarketplace?.enabled ||
-    assetMarketplace.assetGroupId !== assetGroup.id ||
-    !marketplace.magicEden.enabled
-  ) {
+  if (!assetMarketplace || !isCommunityAssetMarketplaceEnabled({ assetGroup, assetMarketplace, marketplace })) {
     return null
   }
 
   return (
-    <SolanaProvider>
-      <CommunityFeatureAssetMarketplaceDialog
-        assetGroup={assetGroup}
-        assetMarketplace={assetMarketplace}
-        onOpenChange={setOpen}
-        open={open}
-        slug={slug}
-      />
-    </SolanaProvider>
+    <Button
+      className="w-full gap-2"
+      nativeButton={false}
+      render={
+        <Link
+          params={{
+            address: assetGroup.address,
+            slug,
+          }}
+          search={{
+            facets: undefined,
+            grid: 8,
+            owner: undefined,
+            query: undefined,
+          }}
+          to="/communities/$slug/collections/$address/marketplace"
+        />
+      }
+      size="sm"
+      variant="outline"
+    >
+      <ShoppingCart className="size-4" />
+      Buy NFT
+    </Button>
   )
 }

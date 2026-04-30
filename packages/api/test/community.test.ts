@@ -294,6 +294,7 @@ async function insertCommunityRole(input: {
 async function insertCommunityRoleCondition(input: {
   assetGroupId: string
   communityRoleId: string
+  maximumAmount?: string | null
   minimumAmount: string
 }) {
   await database.insert(communityRoleSchema.communityRoleCondition).values({
@@ -301,7 +302,7 @@ async function insertCommunityRoleCondition(input: {
     communityRoleId: input.communityRoleId,
     createdAt: new Date('2026-04-11T00:00:00.000Z'),
     id: crypto.randomUUID(),
-    maximumAmount: null,
+    maximumAmount: input.maximumAmount ?? null,
     minimumAmount: input.minimumAmount,
     updatedAt: new Date('2026-04-11T00:00:00.000Z'),
   })
@@ -977,7 +978,7 @@ describe('community routes', () => {
     })
   })
 
-  test('getBySlug exposes Magic Eden asset marketplace eligibility for single collection roles', async () => {
+  test('getBySlug exposes Magic Eden asset marketplace eligibility for linked collections', async () => {
     const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
 
     try {
@@ -1029,12 +1030,12 @@ describe('community routes', () => {
           unavailableReason: null,
         },
       })
-      expect(result.roles[0]?.assetGroups[0]?.symbolMagicEden).toBe('alpha-symbol')
-      expect(result.roles[0]?.assetMarketplace).toEqual({
+      expect(result.collections[0]?.assetMarketplace).toEqual({
         assetGroupId: 'asset-group-alpha',
         enabled: true,
         unavailableReason: null,
       })
+      expect(result.roles[0]?.assetGroups[0]?.symbolMagicEden).toBe('alpha-symbol')
     } finally {
       restoreMagicEdenApiKey()
     }
@@ -1095,7 +1096,7 @@ describe('community routes', () => {
           unavailableReason: 'listing-secret-missing',
         },
       })
-      expect(result.roles[0]?.assetMarketplace).toEqual({
+      expect(result.collections[0]?.assetMarketplace).toEqual({
         assetGroupId: 'asset-group-alpha',
         enabled: false,
         unavailableReason: 'listing-secret-missing',
@@ -1115,7 +1116,7 @@ describe('community routes', () => {
     }
   })
 
-  test('getBySlug marks unsupported role requirements as unavailable in the asset marketplace', async () => {
+  test('getBySlug ignores role amount ranges for linked collection marketplace eligibility', async () => {
     const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
 
     try {
@@ -1148,6 +1149,7 @@ describe('community routes', () => {
       await insertCommunityRoleCondition({
         assetGroupId: 'asset-group-alpha',
         communityRoleId: 'community-role-alpha',
+        maximumAmount: '10',
         minimumAmount: '2',
       })
 
@@ -1160,10 +1162,10 @@ describe('community routes', () => {
         slug: 'alpha-dao',
       })
 
-      expect(result.roles[0]?.assetMarketplace).toEqual({
-        assetGroupId: null,
-        enabled: false,
-        unavailableReason: 'unsupported-role-requirement',
+      expect(result.collections[0]?.assetMarketplace).toEqual({
+        assetGroupId: 'asset-group-alpha',
+        enabled: true,
+        unavailableReason: null,
       })
     } finally {
       restoreMagicEdenApiKey()
@@ -1196,7 +1198,13 @@ describe('community routes', () => {
     }
   })
 
-  test('listAssetMarketplaceListings rejects collections without an enabled role marketplace', async () => {
+  test('listAssetMarketplaceListings allows linked collections regardless of role amount ranges', async () => {
+    const requestedUrls: string[] = []
+    const restoreFetch = withFetch(async (input) => {
+      requestedUrls.push(String(input))
+
+      return Response.json([])
+    })
     const restoreMagicEdenApiKey = withMagicEdenApiKey('magic-eden-api-key')
 
     try {
@@ -1229,27 +1237,26 @@ describe('community routes', () => {
       await insertCommunityRoleCondition({
         assetGroupId: 'asset-group-alpha',
         communityRoleId: 'community-role-alpha',
+        maximumAmount: '10',
         minimumAmount: '2',
       })
 
-      await expectORPCError(
-        communityRouter.listAssetMarketplaceListings.callable(
-          createCallContext({
-            userId: 'viewer-user-id',
-            username: 'viewer',
-          }),
-        )({
-          assetGroupId: 'asset-group-alpha',
-          limit: 12,
-          slug: 'alpha-dao',
+      const result = await communityRouter.listAssetMarketplaceListings.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
         }),
-        {
-          code: 'BAD_REQUEST',
-          message: 'This community collection is not available for marketplace purchases.',
-          status: 400,
-        },
-      )
+      )({
+        assetGroupId: 'asset-group-alpha',
+        limit: 12,
+        slug: 'alpha-dao',
+      })
+
+      expect(result.listings).toEqual([])
+      expect(requestedUrls).toHaveLength(1)
+      expect(requestedUrls[0]).toContain('/v2/collections/alpha-symbol/listings')
     } finally {
+      restoreFetch()
       restoreMagicEdenApiKey()
     }
   })
@@ -1331,7 +1338,7 @@ describe('community routes', () => {
             pdaAddress: 'listing-alpha',
             price: 1.25,
             seller: 'seller-alpha',
-            sellerExpiry: 0,
+            sellerExpiry: -1,
             token: {
               image: 'https://example.com/alpha.png',
               mintAddress: 'mint-alpha',
@@ -1484,6 +1491,7 @@ describe('community routes', () => {
       expect(requestedUrls[0]).toContain('/v2/collections/alpha-symbol/listings')
       expect(requestedUrls[1]).toContain('/v2/instructions/buy_now')
       expect(requestedUrls[1]).toContain('buyer=buyer-alpha')
+      expect(requestedUrls[1]).toContain('sellerExpiry=-1')
       expect(requestedUrls[1]).toContain('tokenATA=ata-alpha')
       expect(requestedUrls[1]).toContain('tokenMint=mint-alpha')
     } finally {
@@ -1608,7 +1616,7 @@ describe('community routes', () => {
               pdaAddress: 'listing-alpha',
               price: 1.25,
               seller: 'seller-alpha',
-              sellerExpiry: 0,
+              sellerExpiry: -1,
               token: {
                 image: 'https://example.com/alpha.png',
                 mintAddress: 'mint-alpha',
@@ -1649,7 +1657,7 @@ describe('community routes', () => {
       name: 'Alpha NFT',
       priceSol: 1.25,
       seller: 'seller-alpha',
-      sellerExpiry: 0,
+      sellerExpiry: -1,
       tokenAta: 'ata-alpha',
     })
 
@@ -1666,6 +1674,7 @@ describe('community routes', () => {
     })
     expect(urls[1]).toContain('/v2/instructions/buy_now')
     expect(urls[1]).toContain('buyer=buyer-alpha')
+    expect(urls[1]).toContain('sellerExpiry=-1')
     expect(urls[1]).toContain('tokenATA=ata-alpha')
     expect(urls[1]).toContain('tokenMint=mint-alpha')
   })

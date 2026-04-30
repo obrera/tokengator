@@ -113,7 +113,7 @@ export type CommunityMarketplaceAvailabilityEntity = {
   }
 }
 
-export type CommunityRoleAssetMarketplaceEntity =
+export type CommunityCollectionAssetMarketplaceEntity =
   | {
       assetGroupId: string
       enabled: true
@@ -122,13 +122,7 @@ export type CommunityRoleAssetMarketplaceEntity =
   | {
       assetGroupId: string | null
       enabled: false
-      unavailableReason:
-        | 'already-assigned'
-        | 'api-key-missing'
-        | 'cluster-unsupported'
-        | 'listing-secret-missing'
-        | 'missing-symbol'
-        | 'unsupported-role-requirement'
+      unavailableReason: 'api-key-missing' | 'cluster-unsupported' | 'listing-secret-missing' | 'missing-symbol'
     }
 
 export function toCommunityCollectionAssetEntity(input: {
@@ -260,9 +254,9 @@ export type CommunityCollectionEntity = ReturnType<typeof toCommunityCollectionE
 export type CommunityCollectionOwnerCandidateEntity = ReturnType<typeof toCommunityCollectionOwnerCandidateEntity>
 export type CommunityDetailEntity = ReturnType<typeof toCommunityDetailEntity>
 export type CommunityEntity = ReturnType<typeof toCommunityEntity>
-export type CommunityGetBySlugResult = Omit<CommunityDetailEntity, 'roles'> & {
+export type CommunityGetBySlugResult = Omit<CommunityDetailEntity, 'collections'> & {
+  collections: Array<CommunityCollectionEntity & { assetMarketplace: CommunityCollectionAssetMarketplaceEntity }>
   marketplace: CommunityMarketplaceAvailabilityEntity
-  roles: Array<CommunityRoleEntity & { assetMarketplace: CommunityRoleAssetMarketplaceEntity }>
 }
 export type CommunityGetCollectionInsightsResult = {
   assetTotal: number

@@ -72,6 +72,11 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
     collections: [
       {
         address: 'collection-alpha',
+        assetMarketplace: {
+          assetGroupId: 'asset-group-alpha',
+          enabled: true,
+          unavailableReason: null,
+        },
         facetTotals: {},
         id: 'asset-group-alpha',
         imageUrl: 'https://example.com/collection-alpha.png',
@@ -115,11 +120,6 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             type: 'mint',
           },
         ],
-        assetMarketplace: {
-          assetGroupId: null,
-          enabled: false,
-          unavailableReason: 'unsupported-role-requirement',
-        },
         assigned: false,
         assignedAssetGroups: [],
         id: 'role-founders',
@@ -141,11 +141,6 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             type: 'mint',
           },
         ],
-        assetMarketplace: {
-          assetGroupId: 'asset-group-beta',
-          enabled: false,
-          unavailableReason: 'already-assigned',
-        },
         assigned: true,
         assignedAssetGroups: [
           {
@@ -190,11 +185,6 @@ function createCommunityWithRoles(): CommunityGetBySlugResult {
             type: 'mint',
           },
         ],
-        assetMarketplace: {
-          assetGroupId: null,
-          enabled: false,
-          unavailableReason: 'unsupported-role-requirement',
-        },
         assigned: false,
         assignedAssetGroups: [],
         id: 'role-supporters',
@@ -227,7 +217,7 @@ beforeAll(async () => {
       marketplace,
     }: {
       assetGroup: CommunityGetBySlugResult['roles'][number]['assetGroups'][number]
-      assetMarketplace: CommunityGetBySlugResult['roles'][number]['assetMarketplace'] | null
+      assetMarketplace: CommunityGetBySlugResult['collections'][number]['assetMarketplace'] | null
       marketplace: CommunityGetBySlugResult['marketplace']
     }) =>
       assetGroup.type === 'collection' &&
@@ -294,7 +284,7 @@ describe('CommunityFeatureOverview', () => {
     expect(markup).toContain('Mint: Beta Token')
     expect(markup).toContain('Collection - collection-alpha')
     expect(markup).toContain('Mint - mint-beta')
-    expect(markup.match(/Buy NFT/g)?.length ?? 0).toBe(0)
+    expect(markup.match(/Buy NFT/g)?.length ?? 0).toBe(1)
     expect(markup).toContain(getExpectedAssetGroupImageUrl('asset-group-beta').replaceAll('&', '&amp;'))
     expect(markup).toContain('https://example.com/collection-alpha.png')
     expect(collectionLinks?.length).toBe(1)

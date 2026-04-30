@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 import { asc, eq, sql } from 'drizzle-orm'
-import { mkdirSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -23,7 +23,7 @@ type ListEnabledAssetGroupsDueForScheduledIndexing =
 type RunScheduledAssetGroupIndex = (typeof import('../src/features/asset-group-index'))['runScheduledAssetGroupIndex']
 
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..', '..', 'db')
-const TEST_DATABASE_DIR = resolve(tmpdir(), 'tokengator-api-tests')
+const TEST_DATABASE_DIR = mkdtempSync(resolve(tmpdir(), 'tokengator-api-tests-'))
 const TEST_DATABASE_URL = pathToFileURL(resolve(TEST_DATABASE_DIR, 'test.sqlite')).toString()
 
 let assetSchema: AssetSchema
@@ -350,10 +350,6 @@ function syncDatabase(databaseUrl: string) {
 }
 
 beforeAll(async () => {
-  mkdirSync(TEST_DATABASE_DIR, {
-    recursive: true,
-  })
-
   process.env.API_URL = 'http://127.0.0.1:3000'
   process.env.BETTER_AUTH_SECRET = '12345678901234567890123456789012'
   process.env.BETTER_AUTH_SOLANA_SIGN_IN_ENABLED = 'true'
@@ -392,7 +388,12 @@ beforeEach(async () => {
   await database.delete(assetSchema.assetGroup).where(sql`1 = 1`)
 })
 
-afterAll(() => {})
+afterAll(() => {
+  rmSync(TEST_DATABASE_DIR, {
+    force: true,
+    recursive: true,
+  })
+})
 
 describe('acquireAutomationLock', () => {
   test('returns acquired false when a concurrent insert wins the lock key first', async () => {

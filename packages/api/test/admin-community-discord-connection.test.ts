@@ -1,6 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 import { eq, sql } from 'drizzle-orm'
-import { mkdirSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -22,7 +22,7 @@ type UpsertCommunityDiscordConnection =
   (typeof import('../src/features/community-discord-connection'))['upsertCommunityDiscordConnection']
 
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..', '..', 'db')
-const TEST_DATABASE_DIR = resolve(tmpdir(), 'tokengator-api-tests')
+const TEST_DATABASE_DIR = mkdtempSync(resolve(tmpdir(), 'tokengator-api-tests-'))
 const TEST_DATABASE_URL = pathToFileURL(resolve(TEST_DATABASE_DIR, 'community-discord-connection.sqlite')).toString()
 
 let authSchema: AuthSchema
@@ -140,10 +140,6 @@ async function insertOrganization(input: { id: string; name: string; slug: strin
 }
 
 beforeAll(async () => {
-  mkdirSync(TEST_DATABASE_DIR, {
-    recursive: true,
-  })
-
   process.env.API_URL = 'http://127.0.0.1:3000'
   process.env.BETTER_AUTH_SECRET = '12345678901234567890123456789012'
   process.env.BETTER_AUTH_SOLANA_SIGN_IN_ENABLED = 'true'
@@ -172,6 +168,13 @@ beforeAll(async () => {
     upsertCommunityDiscordConnection,
   } = await import('../src/features/community-discord-connection'))
 }, 30_000)
+
+afterAll(() => {
+  rmSync(TEST_DATABASE_DIR, {
+    force: true,
+    recursive: true,
+  })
+})
 
 beforeEach(async () => {
   await database.delete(communityRoleSchema.communityDiscordAnnouncement).where(sql`1 = 1`)

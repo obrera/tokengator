@@ -11,6 +11,11 @@ describe('CommunityFeatureCollectionDetail', () => {
       collections: [
         {
           address: 'collection-alpha',
+          assetMarketplace: {
+            assetGroupId: 'collection-1',
+            enabled: false,
+            unavailableReason: 'api-key-missing',
+          },
           facetTotals: {},
           id: 'collection-1',
           imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-1',

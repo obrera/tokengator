@@ -70,6 +70,11 @@ describe('community collection asset deep-link composition', () => {
       collections: [
         {
           address: 'collection-alpha',
+          assetMarketplace: {
+            assetGroupId: 'collection-1',
+            enabled: false as const,
+            unavailableReason: 'api-key-missing' as const,
+          },
           facetTotals: {},
           id: 'collection-1',
           imageUrl: 'https://api.dicebear.com/9.x/glass/svg?seed=asset-group%3Acollection-1',

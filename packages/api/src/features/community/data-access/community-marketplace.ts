@@ -1,9 +1,9 @@
 import { env } from '@tokengator/env/api'
 
 import type {
+  CommunityCollectionAssetMarketplaceEntity,
+  CommunityCollectionEntity,
   CommunityMarketplaceAvailabilityEntity,
-  CommunityRoleAssetMarketplaceEntity,
-  CommunityRoleEntity,
 } from './community.entity'
 
 const MAGIC_EDEN_BASE_URL_BY_CLUSTER = {
@@ -79,65 +79,28 @@ export function getMarketplaceAvailability(): CommunityMarketplaceAvailabilityEn
   }
 }
 
-function getRoleAssetMarketplaceAssetGroup(role: Pick<CommunityRoleEntity, 'assetGroups'>) {
-  if (role.assetGroups.length !== 1) {
-    return null
-  }
-
-  const [assetGroup] = role.assetGroups
-
-  if (!assetGroup) {
-    return null
-  }
-
-  if (assetGroup.maximumAmount !== null || assetGroup.minimumAmount !== '1' || assetGroup.type !== 'collection') {
-    return null
-  }
-
-  return assetGroup
-}
-
-export function getCommunityRoleAssetMarketplace(input: {
-  assigned: boolean
+export function getCommunityCollectionAssetMarketplace(input: {
+  collection: CommunityCollectionEntity
   magicEdenAvailability: CommunityMarketplaceAvailabilityEntity['magicEden']
-  role: Pick<CommunityRoleEntity, 'assetGroups'>
-}): CommunityRoleAssetMarketplaceEntity {
-  const assetGroup = getRoleAssetMarketplaceAssetGroup(input.role)
-
-  if (input.assigned) {
-    return {
-      assetGroupId: assetGroup?.id ?? null,
-      enabled: false,
-      unavailableReason: 'already-assigned',
-    }
-  }
-
+}): CommunityCollectionAssetMarketplaceEntity {
   if (!input.magicEdenAvailability.enabled) {
     return {
-      assetGroupId: assetGroup?.id ?? null,
+      assetGroupId: input.collection.id,
       enabled: false,
       unavailableReason: input.magicEdenAvailability.unavailableReason ?? 'api-key-missing',
     }
   }
 
-  if (!assetGroup) {
+  if (!input.collection.symbolMagicEden) {
     return {
-      assetGroupId: null,
-      enabled: false,
-      unavailableReason: 'unsupported-role-requirement',
-    }
-  }
-
-  if (!assetGroup.symbolMagicEden) {
-    return {
-      assetGroupId: assetGroup.id,
+      assetGroupId: input.collection.id,
       enabled: false,
       unavailableReason: 'missing-symbol',
     }
   }
 
   return {
-    assetGroupId: assetGroup.id,
+    assetGroupId: input.collection.id,
     enabled: true,
     unavailableReason: null,
   }

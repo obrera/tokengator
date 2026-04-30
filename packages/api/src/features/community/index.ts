@@ -1,6 +1,7 @@
 export type {
   CommunityCollectionAssetDetailEntity,
   CommunityCollectionAssetEntity,
+  CommunityCollectionAssetMarketplaceEntity,
   CommunityCollectionAssetTrait,
   CommunityCollectionEntity,
   CommunityCollectionFacetOptionTotals,

@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import type { CommunityCollectionEntity, CommunityGetBySlugResult } from '@tokengator/sdk'
+import type { CommunityGetBySlugResult } from '@tokengator/sdk'
 
 import { Card, CardHeader } from '@tokengator/ui/components/card'
 import { Tabs, TabsList, TabsTrigger } from '@tokengator/ui/components/tabs'
 
 import type { CommunityCollectionAssetSearch } from '../util/community-collection-asset-search'
 import { CommunityUiCollectionCombobox } from '../ui/community-ui-collection-combobox'
+import { getCommunityCollectionAssetMarketplace } from '../util/community-asset-marketplace'
 
-export type CommunityCollectionTab = 'assets' | 'insights' | 'leaderboard'
+export type CommunityCollectionTab = 'assets' | 'insights' | 'leaderboard' | 'marketplace'
+type CommunityCollection = CommunityGetBySlugResult['collections'][number]
 
 const communityCollectionTabs = [
   {
@@ -25,6 +27,11 @@ const communityCollectionTabs = [
     label: 'Leaderboard',
     to: '/communities/$slug/collections/$address/leaderboard',
     value: 'leaderboard',
+  },
+  {
+    label: 'Marketplace',
+    to: '/communities/$slug/collections/$address/marketplace',
+    value: 'marketplace',
   },
 ] as const
 
@@ -61,15 +68,46 @@ export function getCommunityCollectionCurrentTab(pathname: string): CommunityCol
     return 'leaderboard'
   }
 
+  if (tabSegment === 'marketplace') {
+    return 'marketplace'
+  }
+
+  return 'assets'
+}
+
+function getCommunityCollectionSwitchTab(args: {
+  address: string
+  community?: CommunityGetBySlugResult
+  tab: CommunityCollectionTab
+}) {
+  if (args.tab !== 'marketplace' || !args.community) {
+    return args.tab
+  }
+
+  const nextCollection = args.community.collections.find((collection) => collection.address === args.address)
+
+  if (
+    nextCollection &&
+    getCommunityCollectionAssetMarketplace({
+      community: args.community,
+      selectedCollection: nextCollection,
+    })
+  ) {
+    return args.tab
+  }
+
   return 'assets'
 }
 
 export function getCommunityCollectionSwitchNavigation(args: {
   address: string
+  community?: CommunityGetBySlugResult
   search: CommunityCollectionAssetSearch
   slug: string
   tab: CommunityCollectionTab
 }) {
+  const tab = getCommunityCollectionSwitchTab(args)
+
   return {
     params: {
       address: args.address,
@@ -78,40 +116,56 @@ export function getCommunityCollectionSwitchNavigation(args: {
     search: {
       facets: undefined,
       grid: args.search.grid,
-      owner: args.tab === 'assets' ? args.search.owner : undefined,
+      owner: args.tab === 'assets' && tab === 'assets' ? args.search.owner : undefined,
       query: undefined,
     },
-    to: getCommunityCollectionTabTo(args.tab),
+    to: getCommunityCollectionTabTo(tab),
   }
+}
+
+export function getCommunityCollectionVisibleTabs(args: {
+  community: CommunityGetBySlugResult
+  selectedCollection: CommunityCollection
+}) {
+  const hasMarketplace = Boolean(
+    getCommunityCollectionAssetMarketplace({
+      community: args.community,
+      selectedCollection: args.selectedCollection,
+    }),
+  )
+
+  return communityCollectionTabs.filter((tab) => tab.value !== 'marketplace' || hasMarketplace)
 }
 
 export function CommunityFeatureCollectionShell({
   children,
-  collections,
+  community,
   search,
   selectedCollection,
   slug,
 }: {
   children: ReactNode
-  collections: CommunityGetBySlugResult['collections']
+  community: CommunityGetBySlugResult
   search: CommunityCollectionAssetSearch
-  selectedCollection: CommunityCollectionEntity
+  selectedCollection: CommunityCollection
   slug: string
 }) {
   const location = useLocation()
   const navigate = useNavigate()
   const currentTab = getCommunityCollectionCurrentTab(location.pathname)
+  const visibleTabs = getCommunityCollectionVisibleTabs({ community, selectedCollection })
 
   return (
     <div className="grid gap-4">
       <Card>
         <CardHeader className="gap-4">
           <CommunityUiCollectionCombobox
-            collections={collections}
+            collections={community.collections}
             onCollectionChange={(address) => {
               void navigate(
                 getCommunityCollectionSwitchNavigation({
                   address,
+                  community,
                   search,
                   slug,
                   tab: currentTab,
@@ -122,7 +176,7 @@ export function CommunityFeatureCollectionShell({
           />
           <Tabs value={currentTab}>
             <TabsList className="justify-start gap-8 p-0" variant="line">
-              {communityCollectionTabs.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <TabsTrigger
                   className="flex-none rounded-none px-0 py-2 text-xs font-semibold uppercase data-active:after:shadow-[0_7px_14px_1px_color-mix(in_oklch,var(--foreground)_35%,transparent)]"
                   key={tab.value}

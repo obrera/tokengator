@@ -1,7 +1,7 @@
 import { profileCommunityAssetRolesList as profileCommunityAssetRolesListDataAccess } from '../../profile/data-access/profile-community-asset-roles-list'
 
 import { communityGetBySlug as communityGetBySlugDataAccess } from './community-get-by-slug'
-import { getCommunityRoleAssetMarketplace, getMarketplaceAvailability } from './community-marketplace'
+import { getCommunityCollectionAssetMarketplace, getMarketplaceAvailability } from './community-marketplace'
 import {
   toCommunityRoleAssetGroupEntity,
   type CommunityGetBySlugResult,
@@ -52,7 +52,13 @@ export async function communityGetBySlugForUser(input: {
   const marketplace = getMarketplaceAvailability()
 
   return {
-    collections: community.collections,
+    collections: community.collections.map((collection) => ({
+      ...collection,
+      assetMarketplace: getCommunityCollectionAssetMarketplace({
+        collection,
+        magicEdenAvailability: marketplace.magicEden,
+      }),
+    })),
     id: community.id,
     logo: community.logo,
     marketplace,
@@ -64,11 +70,6 @@ export async function communityGetBySlugForUser(input: {
 
       return {
         assetGroups: role.assetGroups,
-        assetMarketplace: getCommunityRoleAssetMarketplace({
-          assigned,
-          magicEdenAvailability: marketplace.magicEden,
-          role,
-        }),
         assigned,
         assignedAssetGroups:
           assignedRole?.assetGroups.map((assetGroup) =>

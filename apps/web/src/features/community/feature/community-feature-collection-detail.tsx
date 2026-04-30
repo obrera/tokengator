@@ -33,7 +33,7 @@ export function CommunityFeatureCollectionDetail({
 
   return (
     <CommunityFeatureCollectionShell
-      collections={initialCommunity.collections}
+      community={initialCommunity}
       search={search}
       selectedCollection={selectedCollection}
       slug={initialCommunity.slug}

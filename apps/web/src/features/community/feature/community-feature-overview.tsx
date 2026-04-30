@@ -10,7 +10,8 @@ import { useCommunityBySlugQuery } from '../data-access/use-community-by-slug-qu
 import { CommunityFeatureAssetMarketplace } from './community-feature-asset-marketplace'
 
 type CommunityOverviewAssetGroup = CommunityGetBySlugResult['roles'][number]['assetGroups'][number]
-type CommunityOverviewAssetMarketplace = CommunityGetBySlugResult['roles'][number]['assetMarketplace']
+type CommunityOverviewAssetMarketplace = CommunityGetBySlugResult['collections'][number]['assetMarketplace']
+type CommunityOverviewCollection = CommunityGetBySlugResult['collections'][number]
 type CommunityOverviewRole = CommunityGetBySlugResult['roles'][number]
 
 const assetGroupResolverKindOrder = {
@@ -63,12 +64,12 @@ function getCommunityOverviewAssetGroups(roles: CommunityOverviewRole[]) {
   return [...assetGroupsById.values()].sort(compareCommunityOverviewAssetGroups)
 }
 
-function getCommunityOverviewAssetMarketplaces(roles: CommunityOverviewRole[]) {
+function getCommunityOverviewAssetMarketplaces(collections: CommunityOverviewCollection[]) {
   const assetMarketplacesByAssetGroupId = new Map<string, CommunityOverviewAssetMarketplace>()
 
-  for (const role of roles) {
-    if (role.assetMarketplace.enabled && role.assetMarketplace.assetGroupId) {
-      assetMarketplacesByAssetGroupId.set(role.assetMarketplace.assetGroupId, role.assetMarketplace)
+  for (const collection of collections) {
+    if (collection.assetMarketplace.enabled) {
+      assetMarketplacesByAssetGroupId.set(collection.assetMarketplace.assetGroupId, collection.assetMarketplace)
     }
   }
 
@@ -232,7 +233,7 @@ export function CommunityFeatureOverview({ initialCommunity }: { initialCommunit
   const assignedRoleAssetGroups = getCommunityOverviewAssignedRoleAssetGroups(data.roles)
   const assignedRoles = data.roles.filter((role) => role.assigned)
   const assetGroups = getCommunityOverviewAssetGroups(data.roles)
-  const assetMarketplacesByAssetGroupId = getCommunityOverviewAssetMarketplaces(data.roles)
+  const assetMarketplacesByAssetGroupId = getCommunityOverviewAssetMarketplaces(data.collections)
   const availableRoles = data.roles.filter((role) => !role.assigned)
 
   return (

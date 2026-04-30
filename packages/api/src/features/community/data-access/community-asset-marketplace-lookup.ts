@@ -33,12 +33,13 @@ export async function communityGetMarketplaceCollectionForUser(input: {
     }
   }
 
+  const collection = community.collections.find((entry) => entry.id === input.assetGroupId) ?? null
   const assetGroup =
     community.roles
       .flatMap((role) => role.assetGroups)
       .find((entry) => entry.id === input.assetGroupId && entry.type === 'collection') ?? null
 
-  if (!assetGroup) {
+  if (!collection || !assetGroup) {
     return {
       assetGroup: null,
       community,
@@ -47,24 +48,14 @@ export async function communityGetMarketplaceCollectionForUser(input: {
     }
   }
 
-  if (!assetGroup.symbolMagicEden) {
+  if (!collection.assetMarketplace.enabled) {
     return {
       assetGroup,
       community,
-      message: 'This community collection is missing a Magic Eden symbol.',
-      status: 'purchase-unavailable',
-    }
-  }
-
-  const enabledRoleMarketplace = community.roles.some(
-    (role) => role.assetMarketplace.enabled && role.assetMarketplace.assetGroupId === assetGroup.id,
-  )
-
-  if (!enabledRoleMarketplace) {
-    return {
-      assetGroup,
-      community,
-      message: 'This community collection is not available for marketplace purchases.',
+      message:
+        collection.assetMarketplace.unavailableReason === 'missing-symbol'
+          ? 'This community collection is missing a Magic Eden symbol.'
+          : 'This community collection is not available for marketplace purchases.',
       status: 'purchase-unavailable',
     }
   }

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { eq, sql } from 'drizzle-orm'
-import { mkdirSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -14,7 +14,7 @@ type PublishCommunityDiscordAnnouncement =
 type DatabaseClient = (typeof import('@tokengator/db'))['db']
 
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..', '..', 'db')
-const TEST_DATABASE_DIR = resolve(tmpdir(), 'tokengator-api-tests')
+const TEST_DATABASE_DIR = mkdtempSync(resolve(tmpdir(), 'tokengator-api-tests-'))
 const TEST_DATABASE_URL = pathToFileURL(resolve(TEST_DATABASE_DIR, 'community-discord-announcement.sqlite')).toString()
 
 let adminOrganizationRouter: AdminOrganizationRouter
@@ -207,10 +207,6 @@ function syncDatabase(databaseUrl: string) {
 }
 
 beforeAll(async () => {
-  mkdirSync(TEST_DATABASE_DIR, {
-    recursive: true,
-  })
-
   process.env.API_URL = 'http://127.0.0.1:3000'
   process.env.BETTER_AUTH_SECRET = '12345678901234567890123456789012'
   process.env.BETTER_AUTH_SOLANA_SIGN_IN_ENABLED = 'true'
@@ -298,6 +294,10 @@ beforeAll(async () => {
 
 afterAll(() => {
   mock.restore()
+  rmSync(TEST_DATABASE_DIR, {
+    force: true,
+    recursive: true,
+  })
 })
 
 beforeEach(async () => {
