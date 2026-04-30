@@ -13,6 +13,7 @@ import {
   ItemSeparator,
   ItemTitle,
 } from '@tokengator/ui/components/item'
+import { JsonViewer, type JsonValue } from '@tokengator/ui/components/json-viewer'
 import { UiDebug } from '@tokengator/ui/components/ui-debug'
 import { UiDetailRow } from '@tokengator/ui/components/ui-detail-row'
 import {
@@ -121,6 +122,86 @@ const devUiFacetFilterInitialDropdownSelection: UiFacetFilterSelection = {
 const devUiFacetFilterInitialPanelSelection: UiFacetFilterSelection = {
   animal: ['cat'],
   'one-of-one': ['glitch'],
+}
+
+const devUiJsonViewerApiResponse: JsonValue = {
+  data: {
+    assetGroups: [
+      {
+        address: 'asset_group_beta',
+        community: 'Core Team',
+        status: 'disabled',
+        tokens: 42,
+      },
+      {
+        address: 'asset_group_founders',
+        community: 'TokenGator',
+        status: 'enabled',
+        tokens: 128,
+      },
+    ],
+    pageInfo: {
+      hasNextPage: false,
+      totalCount: 2,
+    },
+  },
+  request: {
+    method: 'GET',
+    path: '/api/admin/asset-groups',
+    query: {
+      owner: 'tokengator',
+      sort: 'updated-desc',
+    },
+  },
+  status: 200,
+}
+
+const devUiJsonViewerAuditEvent: JsonValue = {
+  actor: {
+    id: 'usr_admin_01',
+    role: 'admin',
+    username: 'beeman',
+  },
+  changes: [
+    {
+      field: 'discordRoleSync',
+      from: false,
+      to: true,
+    },
+    {
+      field: 'minimumBalance',
+      from: 1,
+      to: 2,
+    },
+  ],
+  event: 'community.role_sync.updated',
+  metadata: {
+    discordGuildId: '987654321',
+    requestId: 'req_2uN9jL0',
+    source: 'admin-console',
+  },
+  occurredAt: '2026-04-30T12:15:30Z',
+}
+
+const devUiJsonViewerPackageManifest: JsonValue = {
+  dependencies: {
+    lucideReact: '^0.546.0',
+    react: '^19.2.3',
+    tailwindcss: '^4.1.18',
+  },
+  devDependencies: {
+    typescript: '5.9.3',
+    vite: '^7.0.2',
+  },
+  name: '@tokengator/web',
+  private: true,
+  scripts: {
+    build: 'vite build',
+    checkTypes: 'tsc -b --noEmit',
+    dev: 'vite dev',
+    test: 'bun test ./test',
+  },
+  version: '0.0.0',
 }
 
 export function DevUiShowcaseItemCard() {
@@ -264,6 +345,58 @@ export function DevUiShowcaseUiInfoCardCard() {
           <UiInfoCardError>Discord guild fetch timed out.</UiInfoCardError>
         </UiInfoCard>
       </DevUiShowcaseVariant>
+    </DevUiShowcaseCard>
+  )
+}
+
+export function DevUiShowcaseUiJsonViewerCard() {
+  return (
+    <DevUiShowcaseCard
+      description="Collapsible JSON trees with search, copy controls, expansion depth, and optional code themes."
+      title="JSON Viewer"
+    >
+      <div className="grid gap-4">
+        <DevUiShowcaseVariant
+          contentClassName="overflow-hidden p-0"
+          description="Starts open through the first two object levels for typical API inspection."
+          title="Expanded response"
+        >
+          <JsonViewer
+            className="rounded-md border-0 shadow-none [&>div:last-child]:max-h-80"
+            data={devUiJsonViewerApiResponse}
+            defaultExpanded={2}
+            rootName="response"
+            title="Asset Groups"
+          />
+        </DevUiShowcaseVariant>
+        <DevUiShowcaseVariant
+          contentClassName="overflow-hidden p-0"
+          description="Depth zero keeps the root closed until the user expands it."
+          title="Collapsed manifest"
+        >
+          <JsonViewer
+            className="rounded-md border-0 shadow-none [&>div:last-child]:max-h-80"
+            data={devUiJsonViewerPackageManifest}
+            defaultExpanded={0}
+            rootName="manifest"
+            title="package.json"
+          />
+        </DevUiShowcaseVariant>
+        <DevUiShowcaseVariant
+          contentClassName="overflow-hidden p-0"
+          description="The color theme prop switches token colors while preserving the same controls."
+          title="Themed event"
+        >
+          <JsonViewer
+            className="rounded-md border-0 shadow-none [&>div:last-child]:max-h-80"
+            colorTheme="github-dark"
+            data={devUiJsonViewerAuditEvent}
+            defaultExpanded
+            rootName="auditEvent"
+            title="Audit Event"
+          />
+        </DevUiShowcaseVariant>
+      </div>
     </DevUiShowcaseCard>
   )
 }

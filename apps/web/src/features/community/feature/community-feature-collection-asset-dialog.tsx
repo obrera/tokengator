@@ -6,13 +6,14 @@ import type {
 } from '@tokengator/sdk'
 
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@tokengator/ui/components/accordion'
 import { Badge } from '@tokengator/ui/components/badge'
 import { Button } from '@tokengator/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 import { Dialog, DialogContent, DialogTitle } from '@tokengator/ui/components/dialog'
-import { UiDebug } from '@tokengator/ui/components/ui-debug'
+import { JsonViewer, type JsonValue } from '@tokengator/ui/components/json-viewer'
 
+import { ellipsify } from '@wallet-ui/react'
+import { UiTextCopyIcon } from '@tokengator/ui/components/ui-text-copy-icon.tsx'
 import type { CommunityCollectionAssetSearch } from '../util/community-collection-asset-search'
 import { useCommunityCollectionAssetQuery } from '../data-access/use-community-collection-asset-query'
 import {
@@ -87,7 +88,7 @@ export function CommunityCollectionAssetDialogContent({
       ) : null}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
-          <CardContent className="grid gap-4 p-4">
+          <CardContent>
             {asset.metadataImageUrl ? (
               <img
                 alt={getCommunityCollectionAssetTitle(asset)}
@@ -140,13 +141,26 @@ export function CommunityCollectionAssetDialogContent({
             </CardHeader>
             <CardContent className="grid gap-2 text-sm">
               <div>
-                <div className="text-muted-foreground text-xs">Asset</div>
-                <div className="font-mono break-all">{asset.address}</div>
+                <div className="text-muted-foreground text-xs">Asset address</div>
+                <div className="flex items-center gap-1">
+                  {ellipsify(asset.address)}{' '}
+                  <UiTextCopyIcon text={asset.address} title="Copy asset address" toast="Asset address copied." />
+                </div>
               </div>
               <div>
                 <div className="text-muted-foreground text-xs">Collection</div>
                 <div>{selectedCollection.label}</div>
-                <div className="text-muted-foreground font-mono text-xs break-all">{selectedCollection.address}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs">Collection Address</div>
+                <div className="flex items-center gap-1">
+                  {ellipsify(selectedCollection.address)}{' '}
+                  <UiTextCopyIcon
+                    text={selectedCollection.address}
+                    title="Copy collection address"
+                    toast="Collection address copied."
+                  />
+                </div>
               </div>
               {asset.metadataSymbol ? (
                 <div>
@@ -154,28 +168,34 @@ export function CommunityCollectionAssetDialogContent({
                   <div>{asset.metadataSymbol}</div>
                 </div>
               ) : null}
+              {asset.metadataJsonUrl ? (
+                <div>
+                  <div className="text-muted-foreground text-xs">Metadata URL:</div>
+                  <div className="flex items-center gap-1">
+                    <a href={asset.metadataJsonUrl} rel="noopener noreferrer" target="_blank">
+                      {ellipsify(asset.metadataJsonUrl, 18)}
+                    </a>
+                    <UiTextCopyIcon
+                      text={asset.metadataJsonUrl}
+                      title="Copy metadata JSON URL"
+                      toast="Metadata JSON URL copied."
+                    />
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
-          <Card>
-            <CardContent>
-              <Accordion className="rounded-none border-0">
-                <AccordionItem value="json-metadata">
-                  <AccordionTrigger>JSON Metadata</AccordionTrigger>
-                  <AccordionContent className="grid gap-3 pb-2 text-sm">
-                    <div>
-                      <div className="text-muted-foreground text-xs">Metadata URL</div>
-                      <div className="font-mono break-all">{asset.metadataJsonUrl ?? 'No metadata URL available'}</div>
-                    </div>
-                    {asset.metadataJson ? (
-                      <UiDebug className="bg-muted max-h-80 rounded-md border p-3 text-xs" data={asset.metadataJson} />
-                    ) : (
-                      <div className="text-muted-foreground text-sm">No indexed JSON metadata available yet.</div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </CardContent>
-          </Card>
+          {asset.metadataJson ? (
+            <JsonViewer
+              className="rounded-md shadow-none [&>div:last-child]:max-h-80"
+              data={asset.metadataJson as JsonValue}
+              defaultExpanded={0}
+              rootName="metadata"
+              title="JSON Metadata"
+            />
+          ) : (
+            <div className="text-muted-foreground text-sm">No indexed JSON metadata available yet.</div>
+          )}
         </div>
       </div>
     </>

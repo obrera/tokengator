@@ -3,6 +3,7 @@ import {
   DevUiShowcaseUiDetailRowCard,
   DevUiShowcaseUiFacetFilterCard,
   DevUiShowcaseUiInfoCardCard,
+  DevUiShowcaseUiJsonViewerCard,
   DevUiShowcaseUiListCardCard,
   DevUiShowcaseUiStatusCard,
   DevUiShowcaseUiTableCard,
@@ -16,6 +17,7 @@ export function DevFeatureUi() {
       <DevUiShowcaseUiDetailRowCard />
       <DevUiShowcaseUiFacetFilterCard />
       <DevUiShowcaseUiInfoCardCard />
+      <DevUiShowcaseUiJsonViewerCard />
       <DevUiShowcaseUiListCardCard />
       <DevUiShowcaseUiStatusCard />
       <DevUiShowcaseUiTableCard />
