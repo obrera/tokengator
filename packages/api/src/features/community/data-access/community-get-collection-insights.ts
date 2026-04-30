@@ -1,6 +1,6 @@
-import { asc, eq, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from '@tokengator/db'
-import { asset, assetTrait } from '@tokengator/db/schema/asset'
+import { asset } from '@tokengator/db/schema/asset'
 
 import { communityGetBySlug } from './community-get-by-slug'
 
@@ -46,49 +46,20 @@ export async function communityGetCollectionInsights(input: {
     })
     .from(asset)
     .where(eq(asset.assetGroupId, collection.id))
-  const traitGroupRows = await db
-    .select({
-      groupId: assetTrait.traitKey,
-      label: sql<string>`min(${assetTrait.traitLabel})`,
-      total: sql<number>`cast(count(distinct ${assetTrait.assetId}) as integer)`,
-    })
-    .from(assetTrait)
-    .where(eq(assetTrait.assetGroupId, collection.id))
-    .groupBy(assetTrait.traitKey)
-    .orderBy(asc(assetTrait.traitKey))
-  const traitOptionRows = await db
-    .select({
-      groupId: assetTrait.traitKey,
-      label: sql<string>`min(${assetTrait.traitLabel})`,
-      total: sql<number>`cast(count(distinct ${assetTrait.assetId}) as integer)`,
-      value: assetTrait.traitValue,
-      valueLabel: sql<string>`min(${assetTrait.traitValueLabel})`,
-    })
-    .from(assetTrait)
-    .where(eq(assetTrait.assetGroupId, collection.id))
-    .groupBy(assetTrait.traitKey, assetTrait.traitValue)
-    .orderBy(asc(assetTrait.traitKey), asc(assetTrait.traitValue))
-  const traitOptionsByGroupId = new Map<string, CommunityCollectionInsightsTraitOptionEntity[]>()
-
-  for (const traitOptionRow of traitOptionRows) {
-    const currentOptions = traitOptionsByGroupId.get(traitOptionRow.groupId) ?? []
-
-    currentOptions.push({
-      label: traitOptionRow.valueLabel,
-      total: traitOptionRow.total,
-      value: traitOptionRow.value,
-    })
-    traitOptionsByGroupId.set(traitOptionRow.groupId, currentOptions)
-  }
-
-  const traitGroups: CommunityCollectionInsightsTraitGroupEntity[] = traitGroupRows
-    .map((traitGroupRow) => ({
-      groupId: traitGroupRow.groupId,
-      label: traitGroupRow.label || traitGroupRow.groupId,
-      options: (traitOptionsByGroupId.get(traitGroupRow.groupId) ?? []).sort(
-        compareCommunityCollectionInsightTraitOptions,
-      ),
-      total: traitGroupRow.total,
+  const traitGroups: CommunityCollectionInsightsTraitGroupEntity[] = Object.entries(collection.facetTotals)
+    .map(([groupId, group]) => ({
+      groupId,
+      label: group.label || groupId,
+      options: Object.entries(group.options)
+        .map(
+          ([value, option]): CommunityCollectionInsightsTraitOptionEntity => ({
+            label: option.label,
+            total: option.total,
+            value,
+          }),
+        )
+        .sort(compareCommunityCollectionInsightTraitOptions),
+      total: group.total,
     }))
     .sort(compareCommunityCollectionInsightTraitGroups)
 

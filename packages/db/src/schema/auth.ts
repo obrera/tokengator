@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm'
-import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 const COMMUNITY_DESCRIPTION_MAX_LENGTH = 256
 
@@ -49,10 +49,7 @@ export const organization = sqliteTable(
     websiteUrl: text('website_url'),
     xUrl: text('x_url'),
   },
-  (table) => [
-    check('organization_description_length_check', sql`length(${table.description}) <= 256`),
-    index('organization_slug_idx').on(table.slug),
-  ],
+  (table) => [index('organization_slug_idx').on(table.slug)],
 )
 
 export const session = sqliteTable(

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
-import { sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
@@ -11,6 +11,7 @@ type AuthSchema = typeof import('@tokengator/db/schema/auth')
 type CommunityRoleSchema = typeof import('@tokengator/db/schema/community-role')
 type DatabaseClient = (typeof import('@tokengator/db'))['db']
 type ProfileRouter = typeof import('../src/features/profile/feature/profile-router').profileRouter
+type TestAssetTrait = { groupId: string; groupLabel: string; value: string; valueLabel: string }
 
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..', '..', 'db')
 const ENV_KEYS = [
@@ -111,6 +112,77 @@ function getDefaultAssetGroupResolverKind(type: 'collection' | 'mint'): AssetGro
   return type === 'collection' ? 'helius-collection-assets' : 'helius-token-accounts'
 }
 
+function normalizeTestAssetTraits(traits: TestAssetTrait[] = []) {
+  return [...traits].sort(
+    (left, right) =>
+      left.groupId.localeCompare(right.groupId) ||
+      left.value.localeCompare(right.value) ||
+      left.groupLabel.localeCompare(right.groupLabel) ||
+      left.valueLabel.localeCompare(right.valueLabel),
+  )
+}
+
+async function insertAssetTraitStorage(input: { assetGroupId: string; assetId: string; traits?: TestAssetTrait[] }) {
+  for (const trait of normalizeTestAssetTraits(input.traits)) {
+    await database
+      .insert(assetSchema.assetTraitGroup)
+      .values({
+        assetGroupId: input.assetGroupId,
+        label: trait.groupLabel,
+        value: trait.groupId,
+      })
+      .onConflictDoNothing()
+
+    const [traitGroup] = await database
+      .select({
+        id: assetSchema.assetTraitGroup.id,
+      })
+      .from(assetSchema.assetTraitGroup)
+      .where(
+        and(
+          eq(assetSchema.assetTraitGroup.assetGroupId, input.assetGroupId),
+          eq(assetSchema.assetTraitGroup.value, trait.groupId),
+        ),
+      )
+
+    if (!traitGroup) {
+      throw new Error(`Missing test trait group ${trait.groupId}.`)
+    }
+
+    await database
+      .insert(assetSchema.assetTraitValue)
+      .values({
+        assetGroupId: input.assetGroupId,
+        groupId: traitGroup.id,
+        label: trait.valueLabel,
+        value: trait.value,
+      })
+      .onConflictDoNothing()
+
+    const [traitValue] = await database
+      .select({
+        id: assetSchema.assetTraitValue.id,
+      })
+      .from(assetSchema.assetTraitValue)
+      .where(
+        and(eq(assetSchema.assetTraitValue.groupId, traitGroup.id), eq(assetSchema.assetTraitValue.value, trait.value)),
+      )
+
+    if (!traitValue) {
+      throw new Error(`Missing test trait value ${trait.groupId}:${trait.value}.`)
+    }
+
+    await database
+      .insert(assetSchema.assetTraitMembership)
+      .values({
+        assetGroupId: input.assetGroupId,
+        assetId: input.assetId,
+        valueId: traitValue.id,
+      })
+      .onConflictDoNothing()
+  }
+}
+
 async function insertAsset(input: {
   address: string
   amount: string
@@ -121,8 +193,10 @@ async function insertAsset(input: {
   metadataSymbol?: string | null
   owner: string
   resolverKind: AssetGroupResolverKind
-  traits?: Array<{ groupId: string; groupLabel: string; value: string; valueLabel: string }>
+  traits?: TestAssetTrait[]
 }) {
+  const traits = normalizeTestAssetTraits(input.traits)
+
   await database.insert(assetSchema.asset).values({
     address: input.address,
     amount: input.amount,
@@ -150,21 +224,14 @@ async function insertAsset(input: {
     raw: null,
     resolverId: input.assetGroupId,
     resolverKind: input.resolverKind,
+    traits: JSON.stringify(traits),
   })
 
-  if ((input.traits ?? []).length > 0) {
-    await database.insert(assetSchema.assetTrait).values(
-      input.traits!.map((trait) => ({
-        assetGroupId: input.assetGroupId,
-        assetId: input.id,
-        id: crypto.randomUUID(),
-        traitKey: trait.groupId,
-        traitLabel: trait.groupLabel,
-        traitValue: trait.value,
-        traitValueLabel: trait.valueLabel,
-      })),
-    )
-  }
+  await insertAssetTraitStorage({
+    assetGroupId: input.assetGroupId,
+    assetId: input.id,
+    traits,
+  })
 }
 
 async function insertAssetGroup(input: {
@@ -409,7 +476,9 @@ afterAll(() => {
 })
 
 beforeEach(async () => {
-  await database.delete(assetSchema.assetTrait).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitMembership).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitValue).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitGroup).where(sql`1 = 1`)
   await database.delete(assetSchema.asset).where(sql`1 = 1`)
   await database.delete(communityRoleSchema.communityRoleCondition).where(sql`1 = 1`)
   await database.delete(communityRoleSchema.communityRole).where(sql`1 = 1`)

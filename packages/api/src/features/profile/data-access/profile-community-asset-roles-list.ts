@@ -1,12 +1,13 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { db } from '@tokengator/db'
-import { asset, assetGroup, assetTrait } from '@tokengator/db/schema/asset'
+import { asset, assetGroup } from '@tokengator/db/schema/asset'
 import { solanaWallet } from '@tokengator/db/schema/auth'
 import { communityRole, communityRoleCondition } from '@tokengator/db/schema/community-role'
 import { normalizeAmountToBigInt, type ResolverKind } from '@tokengator/indexer'
 
 import { getAssetGroupImageUrl } from '../../../lib/asset-group-image-url'
 import { getSqliteChunkSize, splitIntoChunks } from '../../../lib/sqlite'
+import { parseStoredJson } from '../../../lib/stored-json'
 
 import type {
   ProfileCommunityAssetRoleEntity,
@@ -52,6 +53,7 @@ type ProfileCommunityAssetRow = {
   metadataSymbol: string | null
   owner: string
   resolverKind: ResolverKind
+  traits: string | null
   visibleLabel: string
 }
 
@@ -109,41 +111,47 @@ function normalizeWalletAddress(address: string) {
   return address.trim()
 }
 
-async function listProfileCollectionAssetTraits(assetIds: string[]) {
-  const traitsByAssetId = new Map<string, ProfileCommunityCollectionAssetTraitEntity[]>()
+function parseStoredProfileAssetTraits(value: string | null): ProfileCommunityCollectionAssetTraitEntity[] {
+  const parsedValue = parseStoredJson<unknown>(value)
 
-  for (const assetIdChunk of splitIntoChunks(assetIds, getSqliteChunkSize(1))) {
-    if (assetIdChunk.length === 0) {
-      continue
-    }
-
-    const traitRows = await db
-      .select({
-        assetId: assetTrait.assetId,
-        groupId: assetTrait.traitKey,
-        groupLabel: assetTrait.traitLabel,
-        id: assetTrait.id,
-        value: assetTrait.traitValue,
-        valueLabel: assetTrait.traitValueLabel,
-      })
-      .from(assetTrait)
-      .where(inArray(assetTrait.assetId, assetIdChunk))
-      .orderBy(asc(assetTrait.assetId), asc(assetTrait.traitKey), asc(assetTrait.traitValue), asc(assetTrait.id))
-
-    for (const traitRow of traitRows) {
-      const existingTraits = traitsByAssetId.get(traitRow.assetId) ?? []
-
-      existingTraits.push({
-        groupId: traitRow.groupId,
-        groupLabel: traitRow.groupLabel,
-        value: traitRow.value,
-        valueLabel: traitRow.valueLabel,
-      })
-      traitsByAssetId.set(traitRow.assetId, existingTraits)
-    }
+  if (!Array.isArray(parsedValue)) {
+    return []
   }
 
-  return traitsByAssetId
+  const traits: ProfileCommunityCollectionAssetTraitEntity[] = []
+
+  for (const entry of parsedValue) {
+    if (
+      !entry ||
+      typeof entry !== 'object' ||
+      !('groupId' in entry) ||
+      !('groupLabel' in entry) ||
+      !('value' in entry) ||
+      !('valueLabel' in entry)
+    ) {
+      return []
+    }
+
+    const trait = entry as Record<string, unknown>
+
+    if (
+      typeof trait.groupId !== 'string' ||
+      typeof trait.groupLabel !== 'string' ||
+      typeof trait.value !== 'string' ||
+      typeof trait.valueLabel !== 'string'
+    ) {
+      return []
+    }
+
+    traits.push({
+      groupId: trait.groupId,
+      groupLabel: trait.groupLabel,
+      value: trait.value,
+      valueLabel: trait.valueLabel,
+    })
+  }
+
+  return traits
 }
 
 async function listProfileCommunityAssetRoleConditionRecords(organizationIds: string[]) {
@@ -203,7 +211,6 @@ function toProfileCommunityAssetRoleGroupEntity(input: {
   condition: ProfileCommunityAssetRoleConditionRecord
   mintAccountsByAssetGroupId: Map<string, ProfileCommunityMintAccountEntity[]>
   mintAmountsByAssetGroupId: Map<string, bigint>
-  traitsByAssetId: Map<string, ProfileCommunityCollectionAssetTraitEntity[]>
 }): ProfileCommunityAssetRoleGroupEntity {
   if (input.condition.type === 'collection') {
     return {
@@ -213,10 +220,7 @@ function toProfileCommunityAssetRoleGroupEntity(input: {
       label: input.condition.label,
       maximumAmount: input.condition.maximumAmount,
       minimumAmount: input.condition.minimumAmount,
-      ownedAssets: (input.collectionAssetsByAssetGroupId.get(input.condition.id) ?? []).map((currentAsset) => ({
-        ...currentAsset,
-        traits: input.traitsByAssetId.get(currentAsset.id) ?? [],
-      })),
+      ownedAssets: input.collectionAssetsByAssetGroupId.get(input.condition.id) ?? [],
       resolverKind: input.condition.resolverKind,
       type: 'collection',
     }
@@ -290,6 +294,7 @@ export async function profileCommunityAssetRolesList(input: { organizationIds: s
             metadataSymbol: asset.metadataSymbol,
             owner: ownerExpression,
             resolverKind: asset.resolverKind,
+            traits: asset.traits,
             visibleLabel: visibleLabelExpression,
           })
           .from(asset)
@@ -337,7 +342,7 @@ export async function profileCommunityAssetRolesList(input: { organizationIds: s
           metadataName: assetRow.metadataName,
           metadataSymbol: assetRow.metadataSymbol,
           owner: assetRow.owner,
-          traits: [],
+          traits: parseStoredProfileAssetTraits(assetRow.traits),
         })
         collectionAssetsByAssetGroupId.set(assetRow.assetGroupId, existingAssets)
         continue
@@ -380,8 +385,6 @@ export async function profileCommunityAssetRolesList(input: { organizationIds: s
     }
   }
 
-  const collectionAssetIds = [...collectionAssetsByAssetGroupId.values()].flat().map((currentAsset) => currentAsset.id)
-  const traitsByAssetId = await listProfileCollectionAssetTraits(collectionAssetIds)
   const assetRolesByOrganizationId = new Map<string, ProfileCommunityAssetRoleEntity[]>()
 
   for (const roleRecord of [...roleRecordsById.values()].sort(compareProfileCommunityAssetRoles)) {
@@ -417,7 +420,6 @@ export async function profileCommunityAssetRolesList(input: { organizationIds: s
             condition,
             mintAccountsByAssetGroupId,
             mintAmountsByAssetGroupId,
-            traitsByAssetId,
           }),
         ),
         id: roleRecord.id,

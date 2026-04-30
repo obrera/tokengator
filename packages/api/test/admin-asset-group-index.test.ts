@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
-import { asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
@@ -21,6 +21,7 @@ type ListAssetGroupIndexRuns = (typeof import('../src/features/asset-group-index
 type ListEnabledAssetGroupsDueForScheduledIndexing =
   (typeof import('../src/features/asset-group-index'))['listEnabledAssetGroupsDueForScheduledIndexing']
 type RunScheduledAssetGroupIndex = (typeof import('../src/features/asset-group-index'))['runScheduledAssetGroupIndex']
+type TestAssetTrait = { groupId: string; groupLabel: string; value: string; valueLabel: string }
 
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..', '..', 'db')
 const TEST_DATABASE_DIR = mkdtempSync(resolve(tmpdir(), 'tokengator-api-tests-'))
@@ -216,6 +217,7 @@ async function getStoredAssets(assetGroupId: string) {
       metadataName: assetSchema.asset.metadataName,
       owner: assetSchema.asset.owner,
       resolverKind: assetSchema.asset.resolverKind,
+      traits: assetSchema.asset.traits,
     })
     .from(assetSchema.asset)
     .where(eq(assetSchema.asset.assetGroupId, assetGroupId))
@@ -223,23 +225,70 @@ async function getStoredAssets(assetGroupId: string) {
 }
 
 async function getStoredAssetTraits(assetGroupId: string) {
+  const rows = await database
+    .select({
+      address: assetSchema.asset.address,
+      traits: assetSchema.asset.traits,
+    })
+    .from(assetSchema.asset)
+    .where(eq(assetSchema.asset.assetGroupId, assetGroupId))
+    .orderBy(asc(assetSchema.asset.address), asc(assetSchema.asset.id))
+
+  return rows.flatMap((row) =>
+    (row.traits ? (JSON.parse(row.traits) as TestAssetTrait[]) : []).map((trait) => ({
+      address: row.address,
+      traitKey: trait.groupId,
+      traitLabel: trait.groupLabel,
+      traitValue: trait.value,
+      traitValueLabel: trait.valueLabel,
+    })),
+  )
+}
+
+async function getStoredTraitGroups(assetGroupId: string) {
+  return await database
+    .select({
+      label: assetSchema.assetTraitGroup.label,
+      traitKey: assetSchema.assetTraitGroup.value,
+    })
+    .from(assetSchema.assetTraitGroup)
+    .where(eq(assetSchema.assetTraitGroup.assetGroupId, assetGroupId))
+    .orderBy(asc(assetSchema.assetTraitGroup.value))
+}
+
+async function getStoredTraitMemberships(assetGroupId: string) {
   return await database
     .select({
       address: assetSchema.asset.address,
-      traitKey: assetSchema.assetTrait.traitKey,
-      traitLabel: assetSchema.assetTrait.traitLabel,
-      traitValue: assetSchema.assetTrait.traitValue,
-      traitValueLabel: assetSchema.assetTrait.traitValueLabel,
+      traitKey: assetSchema.assetTraitGroup.value,
+      traitValue: assetSchema.assetTraitValue.value,
     })
-    .from(assetSchema.assetTrait)
-    .innerJoin(assetSchema.asset, eq(assetSchema.assetTrait.assetId, assetSchema.asset.id))
-    .where(eq(assetSchema.assetTrait.assetGroupId, assetGroupId))
+    .from(assetSchema.assetTraitMembership)
+    .innerJoin(assetSchema.asset, eq(assetSchema.asset.id, assetSchema.assetTraitMembership.assetId))
+    .innerJoin(
+      assetSchema.assetTraitValue,
+      eq(assetSchema.assetTraitValue.id, assetSchema.assetTraitMembership.valueId),
+    )
+    .innerJoin(assetSchema.assetTraitGroup, eq(assetSchema.assetTraitGroup.id, assetSchema.assetTraitValue.groupId))
+    .where(eq(assetSchema.assetTraitMembership.assetGroupId, assetGroupId))
     .orderBy(
       asc(assetSchema.asset.address),
-      asc(assetSchema.assetTrait.traitKey),
-      asc(assetSchema.assetTrait.traitValue),
-      asc(assetSchema.assetTrait.id),
+      asc(assetSchema.assetTraitGroup.value),
+      asc(assetSchema.assetTraitValue.value),
     )
+}
+
+async function getStoredTraitValues(assetGroupId: string) {
+  return await database
+    .select({
+      label: assetSchema.assetTraitValue.label,
+      traitKey: assetSchema.assetTraitGroup.value,
+      traitValue: assetSchema.assetTraitValue.value,
+    })
+    .from(assetSchema.assetTraitValue)
+    .innerJoin(assetSchema.assetTraitGroup, eq(assetSchema.assetTraitGroup.id, assetSchema.assetTraitValue.groupId))
+    .where(eq(assetSchema.assetTraitValue.assetGroupId, assetGroupId))
+    .orderBy(asc(assetSchema.assetTraitGroup.value), asc(assetSchema.assetTraitValue.value))
 }
 
 async function getStoredFacetTotals(assetGroupId: string) {
@@ -274,6 +323,77 @@ async function insertAssetGroupRecord(input: {
   })
 }
 
+function normalizeTestAssetTraits(traits: TestAssetTrait[] = []) {
+  return [...traits].sort(
+    (left, right) =>
+      left.groupId.localeCompare(right.groupId) ||
+      left.value.localeCompare(right.value) ||
+      left.groupLabel.localeCompare(right.groupLabel) ||
+      left.valueLabel.localeCompare(right.valueLabel),
+  )
+}
+
+async function insertAssetTraitStorage(input: { assetGroupId: string; assetId: string; traits?: TestAssetTrait[] }) {
+  for (const trait of normalizeTestAssetTraits(input.traits)) {
+    await database
+      .insert(assetSchema.assetTraitGroup)
+      .values({
+        assetGroupId: input.assetGroupId,
+        label: trait.groupLabel,
+        value: trait.groupId,
+      })
+      .onConflictDoNothing()
+
+    const [traitGroup] = await database
+      .select({
+        id: assetSchema.assetTraitGroup.id,
+      })
+      .from(assetSchema.assetTraitGroup)
+      .where(
+        and(
+          eq(assetSchema.assetTraitGroup.assetGroupId, input.assetGroupId),
+          eq(assetSchema.assetTraitGroup.value, trait.groupId),
+        ),
+      )
+
+    if (!traitGroup) {
+      throw new Error(`Missing test trait group ${trait.groupId}.`)
+    }
+
+    await database
+      .insert(assetSchema.assetTraitValue)
+      .values({
+        assetGroupId: input.assetGroupId,
+        groupId: traitGroup.id,
+        label: trait.valueLabel,
+        value: trait.value,
+      })
+      .onConflictDoNothing()
+
+    const [traitValue] = await database
+      .select({
+        id: assetSchema.assetTraitValue.id,
+      })
+      .from(assetSchema.assetTraitValue)
+      .where(
+        and(eq(assetSchema.assetTraitValue.groupId, traitGroup.id), eq(assetSchema.assetTraitValue.value, trait.value)),
+      )
+
+    if (!traitValue) {
+      throw new Error(`Missing test trait value ${trait.groupId}:${trait.value}.`)
+    }
+
+    await database
+      .insert(assetSchema.assetTraitMembership)
+      .values({
+        assetGroupId: input.assetGroupId,
+        assetId: input.assetId,
+        valueId: traitValue.id,
+      })
+      .onConflictDoNothing()
+  }
+}
+
 async function insertAssetRecord(input: {
   address: string
   amount: string
@@ -283,9 +403,10 @@ async function insertAssetRecord(input: {
   metadataName?: string | null
   owner: string
   resolverKind: AssetGroupResolverKind
-  traits?: Array<{ groupId: string; groupLabel: string; value: string; valueLabel: string }>
+  traits?: TestAssetTrait[]
 }) {
   const assetId = crypto.randomUUID()
+  const traits = normalizeTestAssetTraits(input.traits)
 
   await database.insert(assetSchema.asset).values({
     address: input.address,
@@ -314,21 +435,14 @@ async function insertAssetRecord(input: {
     raw: null,
     resolverId: input.assetGroupId,
     resolverKind: input.resolverKind,
+    traits: JSON.stringify(traits),
   })
 
-  if ((input.traits ?? []).length > 0) {
-    await database.insert(assetSchema.assetTrait).values(
-      input.traits!.map((trait) => ({
-        assetGroupId: input.assetGroupId,
-        assetId,
-        id: crypto.randomUUID(),
-        traitKey: trait.groupId,
-        traitLabel: trait.groupLabel,
-        traitValue: trait.value,
-        traitValueLabel: trait.valueLabel,
-      })),
-    )
-  }
+  await insertAssetTraitStorage({
+    assetGroupId: input.assetGroupId,
+    assetId,
+    traits,
+  })
 }
 
 function syncDatabase(databaseUrl: string) {
@@ -383,7 +497,9 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await database.delete(automationSchema.automationLock).where(sql`1 = 1`)
-  await database.delete(assetSchema.assetTrait).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitMembership).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitValue).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitGroup).where(sql`1 = 1`)
   await database.delete(assetSchema.asset).where(sql`1 = 1`)
   await database.delete(assetSchema.assetGroup).where(sql`1 = 1`)
 })
@@ -768,6 +884,57 @@ describe('indexAssetGroup', () => {
         traitLabel: 'Hat',
         traitValue: 'crown',
         traitValueLabel: 'Crown',
+      },
+    ])
+    await expect(getStoredTraitGroups(assetGroupId)).resolves.toEqual([
+      {
+        label: 'Background',
+        traitKey: 'background',
+      },
+      {
+        label: 'Hat',
+        traitKey: 'hat',
+      },
+    ])
+    await expect(getStoredTraitValues(assetGroupId)).resolves.toEqual(
+      expect.arrayContaining([
+        {
+          label: 'Forest',
+          traitKey: 'background',
+          traitValue: 'forest',
+        },
+        {
+          label: 'Cap',
+          traitKey: 'hat',
+          traitValue: 'cap',
+        },
+        {
+          label: 'Crown',
+          traitKey: 'hat',
+          traitValue: 'crown',
+        },
+      ]),
+    )
+    await expect(getStoredTraitMemberships(assetGroupId)).resolves.toEqual([
+      {
+        address: 'asset-a',
+        traitKey: 'background',
+        traitValue: 'forest',
+      },
+      {
+        address: 'asset-a',
+        traitKey: 'hat',
+        traitValue: 'cap',
+      },
+      {
+        address: 'asset-b',
+        traitKey: 'background',
+        traitValue: 'forest',
+      },
+      {
+        address: 'asset-b',
+        traitKey: 'hat',
+        traitValue: 'crown',
       },
     ])
     await expect(getStoredFacetTotals(assetGroupId)).resolves.toEqual({
@@ -1185,7 +1352,7 @@ describe('indexAssetGroup', () => {
           id: assetGroupId,
           type: 'collection',
         }),
-        database: createInsertFailureDatabase(assetSchema.assetTrait) as never,
+        database: createInsertFailureDatabase(assetSchema.assetTraitMembership) as never,
         heliusCluster: 'devnet',
         now: () => now,
       }),

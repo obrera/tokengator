@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
-import { sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
@@ -162,6 +162,7 @@ function withMagicEdenApiKey(value: string | undefined) {
 }
 
 type TestFetch = (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => ReturnType<typeof fetch>
+type TestAssetTrait = { groupId: string; groupLabel: string; value: string; valueLabel: string }
 
 function withFetch(value: TestFetch) {
   const previousValue = globalThis.fetch
@@ -186,6 +187,77 @@ function createMagicEdenListingInput(input: Partial<TestMagicEdenListingInput> =
     tokenAta: 'ata-alpha',
     verification: 'listing-verification',
     ...input,
+  }
+}
+
+function normalizeTestAssetTraits(traits: TestAssetTrait[] = []) {
+  return [...traits].sort(
+    (left, right) =>
+      left.groupId.localeCompare(right.groupId) ||
+      left.value.localeCompare(right.value) ||
+      left.groupLabel.localeCompare(right.groupLabel) ||
+      left.valueLabel.localeCompare(right.valueLabel),
+  )
+}
+
+async function insertAssetTraitStorage(input: { assetGroupId: string; assetId: string; traits?: TestAssetTrait[] }) {
+  for (const trait of normalizeTestAssetTraits(input.traits)) {
+    await database
+      .insert(assetSchema.assetTraitGroup)
+      .values({
+        assetGroupId: input.assetGroupId,
+        label: trait.groupLabel,
+        value: trait.groupId,
+      })
+      .onConflictDoNothing()
+
+    const [traitGroup] = await database
+      .select({
+        id: assetSchema.assetTraitGroup.id,
+      })
+      .from(assetSchema.assetTraitGroup)
+      .where(
+        and(
+          eq(assetSchema.assetTraitGroup.assetGroupId, input.assetGroupId),
+          eq(assetSchema.assetTraitGroup.value, trait.groupId),
+        ),
+      )
+
+    if (!traitGroup) {
+      throw new Error(`Missing test trait group ${trait.groupId}.`)
+    }
+
+    await database
+      .insert(assetSchema.assetTraitValue)
+      .values({
+        assetGroupId: input.assetGroupId,
+        groupId: traitGroup.id,
+        label: trait.valueLabel,
+        value: trait.value,
+      })
+      .onConflictDoNothing()
+
+    const [traitValue] = await database
+      .select({
+        id: assetSchema.assetTraitValue.id,
+      })
+      .from(assetSchema.assetTraitValue)
+      .where(
+        and(eq(assetSchema.assetTraitValue.groupId, traitGroup.id), eq(assetSchema.assetTraitValue.value, trait.value)),
+      )
+
+    if (!traitValue) {
+      throw new Error(`Missing test trait value ${trait.groupId}:${trait.value}.`)
+    }
+
+    await database
+      .insert(assetSchema.assetTraitMembership)
+      .values({
+        assetGroupId: input.assetGroupId,
+        assetId: input.assetId,
+        valueId: traitValue.id,
+      })
+      .onConflictDoNothing()
   }
 }
 
@@ -228,8 +300,10 @@ async function insertAsset(input: {
   metadataName?: string | null
   metadataSymbol?: string | null
   owner: string
-  traits?: Array<{ groupId: string; groupLabel: string; value: string; valueLabel: string }>
+  traits?: TestAssetTrait[]
 }) {
+  const traits = normalizeTestAssetTraits(input.traits)
+
   await database.insert(assetSchema.asset).values({
     address: input.address,
     amount: '1',
@@ -252,21 +326,14 @@ async function insertAsset(input: {
     raw: null,
     resolverId: input.assetGroupId,
     resolverKind: 'helius-collection-assets',
+    traits: JSON.stringify(traits),
   })
 
-  if ((input.traits ?? []).length > 0) {
-    await database.insert(assetSchema.assetTrait).values(
-      input.traits!.map((trait) => ({
-        assetGroupId: input.assetGroupId,
-        assetId: input.id,
-        id: crypto.randomUUID(),
-        traitKey: trait.groupId,
-        traitLabel: trait.groupLabel,
-        traitValue: trait.value,
-        traitValueLabel: trait.valueLabel,
-      })),
-    )
-  }
+  await insertAssetTraitStorage({
+    assetGroupId: input.assetGroupId,
+    assetId: input.id,
+    traits,
+  })
 }
 
 async function insertCommunityRole(input: {
@@ -430,7 +497,9 @@ afterAll(() => {
 })
 
 beforeEach(async () => {
-  await database.delete(assetSchema.assetTrait).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitMembership).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitValue).where(sql`1 = 1`)
+  await database.delete(assetSchema.assetTraitGroup).where(sql`1 = 1`)
   await database.delete(assetSchema.asset).where(sql`1 = 1`)
   await database.delete(communityRoleSchema.communityRoleCondition).where(sql`1 = 1`)
   await database.delete(communityRoleSchema.communityRole).where(sql`1 = 1`)
@@ -717,6 +786,32 @@ describe('community routes', () => {
     })
     await insertAssetGroup({
       address: 'collection-alpha',
+      facetTotals: {
+        background: {
+          label: 'Background',
+          options: {
+            desert: {
+              label: 'Desert',
+              total: 1,
+            },
+            forest: {
+              label: 'Forest',
+              total: 2,
+            },
+          },
+          total: 3,
+        },
+        hat: {
+          label: 'Hat',
+          options: {
+            cap: {
+              label: 'Cap',
+              total: 1,
+            },
+          },
+          total: 1,
+        },
+      },
       id: 'asset-group-alpha',
       label: 'Alpha Collection',
       type: 'collection',
@@ -2347,6 +2442,30 @@ describe('community routes', () => {
     expect(
       await callable({
         address: 'collection-alpha',
+        facets: {
+          unknown: ['missing'],
+        },
+        slug: 'alpha-dao',
+      }),
+    ).toEqual({
+      assets: [],
+      facetTotals: getExpectedFacetTotals({
+        background: {
+          desert: 0,
+          forest: 0,
+          total: 0,
+        },
+        hat: {
+          cap: 0,
+          crown: 0,
+          total: 0,
+        },
+      }),
+    })
+
+    expect(
+      await callable({
+        address: 'collection-alpha',
         query: 'FALLBACK',
         slug: 'alpha-dao',
       }),
@@ -2380,6 +2499,32 @@ describe('community routes', () => {
     })
     await insertAssetGroup({
       address: 'collection-alpha',
+      facetTotals: {
+        background: {
+          label: 'Background',
+          options: {
+            desert: {
+              label: 'Desert',
+              total: 1,
+            },
+            forest: {
+              label: 'Forest',
+              total: 2,
+            },
+          },
+          total: 3,
+        },
+        hat: {
+          label: 'Hat',
+          options: {
+            cap: {
+              label: 'Cap',
+              total: 1,
+            },
+          },
+          total: 1,
+        },
+      },
       id: 'asset-group-alpha',
       label: 'Alpha Collection',
       type: 'collection',

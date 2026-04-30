@@ -1,6 +1,6 @@
 import { and, asc, eq, exists, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db } from '@tokengator/db'
-import { asset, assetTrait } from '@tokengator/db/schema/asset'
+import { asset, assetTraitGroup, assetTraitMembership, assetTraitValue } from '@tokengator/db/schema/asset'
 import { solanaWallet, user } from '@tokengator/db/schema/auth'
 
 import { getSqliteChunkSize, splitIntoChunks } from '../../../lib/sqlite'
@@ -8,8 +8,7 @@ import { getSqliteChunkSize, splitIntoChunks } from '../../../lib/sqlite'
 import { communityGetBySlug } from './community-get-by-slug'
 import {
   communityCollectionAssetEntityColumns,
-  communityCollectionAssetTraitEntityColumns,
-  toCommunityCollectionAssetTrait,
+  parseStoredAssetTraits,
   toCommunityCollectionAssetEntity,
   toCommunityListCollectionAssetsResult,
   type CommunityCollectionFacetTotals,
@@ -95,10 +94,81 @@ function sortCommunityCollectionFacetTotals(
   )
 }
 
+async function resolveCommunityCollectionFacetValueFilters(input: {
+  collectionId: string
+  facets?: Record<string, string[]>
+}) {
+  const facetEntries = Object.entries(input.facets ?? {})
+    .map(
+      ([groupId, values]) => [groupId, [...new Set(values)].sort((left, right) => left.localeCompare(right))] as const,
+    )
+    .sort(([leftGroupId], [rightGroupId]) => leftGroupId.localeCompare(rightGroupId))
+  const valueIdsByGroupId = new Map<string, string[]>()
+
+  if (facetEntries.length === 0) {
+    return valueIdsByGroupId
+  }
+
+  const groupIds = facetEntries.map(([groupId]) => groupId)
+  const values = [...new Set(facetEntries.flatMap(([, groupValues]) => groupValues))].sort((left, right) =>
+    left.localeCompare(right),
+  )
+
+  if (values.length === 0) {
+    for (const [groupId] of facetEntries) {
+      valueIdsByGroupId.set(groupId, [])
+    }
+
+    return valueIdsByGroupId
+  }
+
+  const facetValueRows = []
+
+  for (const groupIdChunk of splitIntoChunks(groupIds, getSqliteChunkSize(2))) {
+    const valueChunkSize = Math.max(1, getSqliteChunkSize(1) - groupIdChunk.length - 1)
+
+    for (const valueChunk of splitIntoChunks(values, valueChunkSize)) {
+      facetValueRows.push(
+        ...(await db
+          .select({
+            groupId: assetTraitGroup.value,
+            id: assetTraitValue.id,
+            value: assetTraitValue.value,
+          })
+          .from(assetTraitGroup)
+          .innerJoin(assetTraitValue, eq(assetTraitValue.groupId, assetTraitGroup.id))
+          .where(
+            and(
+              eq(assetTraitGroup.assetGroupId, input.collectionId),
+              inArray(assetTraitGroup.value, groupIdChunk),
+              inArray(assetTraitValue.value, valueChunk),
+            ),
+          )),
+      )
+    }
+  }
+
+  const facetValueIdByGroupValue = new Map(
+    facetValueRows.map((facetValueRow) => [
+      JSON.stringify([facetValueRow.groupId, facetValueRow.value]),
+      facetValueRow.id,
+    ]),
+  )
+
+  for (const [groupId, groupValues] of facetEntries) {
+    const valueIds = groupValues.map((value) => facetValueIdByGroupValue.get(JSON.stringify([groupId, value])))
+    const resolvedValueIds = valueIds.filter((valueId): valueId is string => Boolean(valueId))
+
+    valueIdsByGroupId.set(groupId, resolvedValueIds.length === valueIds.length ? resolvedValueIds : [])
+  }
+
+  return valueIdsByGroupId
+}
+
 function getCommunityCollectionAssetFilters(input: {
   collectionId: string
   excludedFacetGroupId?: string
-  facets?: Record<string, string[]>
+  facetValueIdsByGroupId: Map<string, string[]>
   metadataQueryPattern: string | null
   ownerSearchTerm: string | null
   ownerUsernameSearchPattern: string | null
@@ -106,10 +176,15 @@ function getCommunityCollectionAssetFilters(input: {
 }): SQL<unknown>[] {
   const filters: SQL<unknown>[] = [eq(asset.assetGroupId, input.collectionId)]
 
-  for (const [groupId, values] of Object.entries(input.facets ?? {}).sort(([leftGroupId], [rightGroupId]) =>
+  for (const [groupId, valueIds] of [...input.facetValueIdsByGroupId.entries()].sort(([leftGroupId], [rightGroupId]) =>
     leftGroupId.localeCompare(rightGroupId),
   )) {
     if (groupId === input.excludedFacetGroupId) {
+      continue
+    }
+
+    if (valueIds.length === 0) {
+      filters.push(sql`0 = 1`)
       continue
     }
 
@@ -117,14 +192,14 @@ function getCommunityCollectionAssetFilters(input: {
       exists(
         db
           .select({
-            id: assetTrait.id,
+            valueId: assetTraitMembership.valueId,
           })
-          .from(assetTrait)
+          .from(assetTraitMembership)
           .where(
             and(
-              eq(assetTrait.assetId, asset.id),
-              eq(assetTrait.traitKey, groupId),
-              inArray(assetTrait.traitValue, values),
+              eq(assetTraitMembership.assetGroupId, input.collectionId),
+              eq(assetTraitMembership.assetId, asset.id),
+              inArray(assetTraitMembership.valueId, valueIds),
             ),
           ),
       ),
@@ -172,8 +247,8 @@ function getCommunityCollectionAssetFilters(input: {
 
 async function getCommunityCollectionFacetTotals(input: {
   collectionId: string
+  facetValueIdsByGroupId: Map<string, string[]>
   facetTotals: CommunityCollectionFacetTotals
-  facets?: Record<string, string[]>
   metadataQueryPattern: string | null
   ownerSearchTerm: string | null
   ownerUsernameSearchPattern: string | null
@@ -182,12 +257,12 @@ async function getCommunityCollectionFacetTotals(input: {
   const nextFacetTotals = createEmptyCommunityCollectionFacetTotals(input.facetTotals)
   const facetGroupRows = await db
     .select({
-      traitKey: assetTrait.traitKey,
+      traitKey: assetTraitGroup.value,
     })
-    .from(assetTrait)
-    .where(eq(assetTrait.assetGroupId, input.collectionId))
-    .groupBy(assetTrait.traitKey)
-    .orderBy(asc(assetTrait.traitKey))
+    .from(assetTraitGroup)
+    .where(eq(assetTraitGroup.assetGroupId, input.collectionId))
+    .groupBy(assetTraitGroup.value)
+    .orderBy(asc(assetTraitGroup.value))
   const facetGroupIds = [
     ...new Set([...Object.keys(input.facetTotals), ...facetGroupRows.map((row) => row.traitKey)]),
   ].sort()
@@ -196,7 +271,7 @@ async function getCommunityCollectionFacetTotals(input: {
     const filters = getCommunityCollectionAssetFilters({
       collectionId: input.collectionId,
       excludedFacetGroupId: facetGroupId,
-      facets: input.facets,
+      facetValueIdsByGroupId: input.facetValueIdsByGroupId,
       metadataQueryPattern: input.metadataQueryPattern,
       ownerSearchTerm: input.ownerSearchTerm,
       ownerUsernameSearchPattern: input.ownerUsernameSearchPattern,
@@ -204,24 +279,47 @@ async function getCommunityCollectionFacetTotals(input: {
     })
     const [facetGroupCountRow] = await db
       .select({
-        label: sql<string>`min(${assetTrait.traitLabel})`,
+        label: assetTraitGroup.label,
         total: sql<number>`cast(count(distinct ${asset.id}) as integer)`,
       })
       .from(asset)
-      .innerJoin(assetTrait, eq(assetTrait.assetId, asset.id))
-      .where(and(...filters, eq(assetTrait.traitKey, facetGroupId)))
+      .innerJoin(assetTraitMembership, eq(assetTraitMembership.assetId, asset.id))
+      .innerJoin(assetTraitValue, eq(assetTraitValue.id, assetTraitMembership.valueId))
+      .innerJoin(assetTraitGroup, eq(assetTraitGroup.id, assetTraitValue.groupId))
+      .where(
+        and(
+          ...filters,
+          eq(assetTraitMembership.assetGroupId, input.collectionId),
+          eq(assetTraitGroup.value, facetGroupId),
+        ),
+      )
+      .groupBy(assetTraitGroup.id, assetTraitGroup.label)
     const facetOptionRows = await db
       .select({
-        label: sql<string>`min(${assetTrait.traitLabel})`,
+        label: assetTraitGroup.label,
         total: sql<number>`cast(count(distinct ${asset.id}) as integer)`,
-        value: assetTrait.traitValue,
-        valueLabel: sql<string>`min(${assetTrait.traitValueLabel})`,
+        value: assetTraitValue.value,
+        valueLabel: assetTraitValue.label,
       })
       .from(asset)
-      .innerJoin(assetTrait, eq(assetTrait.assetId, asset.id))
-      .where(and(...filters, eq(assetTrait.traitKey, facetGroupId)))
-      .groupBy(assetTrait.traitKey, assetTrait.traitValue)
-      .orderBy(asc(assetTrait.traitValue))
+      .innerJoin(assetTraitMembership, eq(assetTraitMembership.assetId, asset.id))
+      .innerJoin(assetTraitValue, eq(assetTraitValue.id, assetTraitMembership.valueId))
+      .innerJoin(assetTraitGroup, eq(assetTraitGroup.id, assetTraitValue.groupId))
+      .where(
+        and(
+          ...filters,
+          eq(assetTraitMembership.assetGroupId, input.collectionId),
+          eq(assetTraitGroup.value, facetGroupId),
+        ),
+      )
+      .groupBy(
+        assetTraitGroup.id,
+        assetTraitGroup.label,
+        assetTraitValue.id,
+        assetTraitValue.value,
+        assetTraitValue.label,
+      )
+      .orderBy(asc(assetTraitValue.value))
 
     if (!facetGroupCountRow?.label && facetOptionRows.length === 0 && !nextFacetTotals[facetGroupId]) {
       continue
@@ -273,9 +371,13 @@ export async function communityListCollectionAssets(input: {
   const ownerUsernameSearchPattern = createCommunityCollectionUsernameSearchPattern(input.owner)
   const querySearchTerm = normalizeCommunityCollectionSearchTerm(input.query)
   const visibleLabelExpression = sql<string>`coalesce(nullif(lower(${asset.metadataName}), ''), ${asset.address})`
-  const filters = getCommunityCollectionAssetFilters({
+  const facetValueIdsByGroupId = await resolveCommunityCollectionFacetValueFilters({
     collectionId: collection.id,
     facets: input.facets,
+  })
+  const filters = getCommunityCollectionAssetFilters({
+    collectionId: collection.id,
+    facetValueIdsByGroupId,
     metadataQueryPattern,
     ownerSearchTerm,
     ownerUsernameSearchPattern,
@@ -287,58 +389,29 @@ export async function communityListCollectionAssets(input: {
     .from(asset)
     .where(and(...filters))
     .orderBy(asc(visibleLabelExpression), asc(asset.owner), asc(asset.address), asc(asset.id))
-  const assetIds = assets.map((currentAsset) => currentAsset.id)
-  const traitRows: Array<{
-    assetId: string
-    groupId: string
-    groupLabel: string
-    value: string
-    valueLabel: string
-  }> = []
-
-  for (const assetIdChunk of splitIntoChunks(assetIds, getSqliteChunkSize(1))) {
-    if (assetIdChunk.length === 0) {
-      continue
-    }
-
-    traitRows.push(
-      ...(await db
-        .select(communityCollectionAssetTraitEntityColumns)
-        .from(assetTrait)
-        .where(inArray(assetTrait.assetId, assetIdChunk))
-        .orderBy(asc(assetTrait.assetId), asc(assetTrait.traitKey), asc(assetTrait.traitValue), asc(assetTrait.id))),
-    )
-  }
-  const traitsByAssetId = new Map<string, ReturnType<typeof toCommunityCollectionAssetTrait>[]>()
-
-  for (const traitRow of traitRows) {
-    const currentTraits = traitsByAssetId.get(traitRow.assetId) ?? []
-
-    currentTraits.push(
-      toCommunityCollectionAssetTrait({
-        groupId: traitRow.groupId,
-        groupLabel: traitRow.groupLabel,
-        value: traitRow.value,
-        valueLabel: traitRow.valueLabel,
-      }),
-    )
-    traitsByAssetId.set(traitRow.assetId, currentTraits)
-  }
-  const facetTotals = await getCommunityCollectionFacetTotals({
-    collectionId: collection.id,
-    facets: input.facets,
-    facetTotals: collection.facetTotals,
-    metadataQueryPattern,
-    ownerSearchTerm,
-    ownerUsernameSearchPattern,
-    querySearchTerm,
-  })
+  const shouldRecomputeFacetTotals =
+    facetValueIdsByGroupId.size > 0 ||
+    Boolean(metadataQueryPattern) ||
+    Boolean(ownerSearchTerm) ||
+    Boolean(ownerUsernameSearchPattern) ||
+    Boolean(querySearchTerm)
+  const facetTotals = shouldRecomputeFacetTotals
+    ? await getCommunityCollectionFacetTotals({
+        collectionId: collection.id,
+        facetTotals: collection.facetTotals,
+        facetValueIdsByGroupId,
+        metadataQueryPattern,
+        ownerSearchTerm,
+        ownerUsernameSearchPattern,
+        querySearchTerm,
+      })
+    : collection.facetTotals
 
   return toCommunityListCollectionAssetsResult({
     assets: assets.map((currentAsset) =>
       toCommunityCollectionAssetEntity({
         ...currentAsset,
-        traits: traitsByAssetId.get(currentAsset.id) ?? [],
+        traits: parseStoredAssetTraits(currentAsset.traits),
       }),
     ),
     facetTotals,

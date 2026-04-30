@@ -1,15 +1,14 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '@tokengator/db'
-import { asset, assetTrait } from '@tokengator/db/schema/asset'
+import { asset } from '@tokengator/db/schema/asset'
 
 import { parseStoredJson } from '../../../lib/stored-json'
 
 import { communityGetBySlug } from './community-get-by-slug'
 import {
   communityCollectionAssetDetailEntityColumns,
-  communityCollectionAssetTraitEntityColumns,
+  parseStoredAssetTraits,
   toCommunityCollectionAssetDetailEntity,
-  toCommunityCollectionAssetTrait,
   type CommunityCollectionAssetDetailEntity,
 } from './community.entity'
 
@@ -39,22 +38,9 @@ export async function communityGetCollectionAsset(input: {
     return null
   }
 
-  const traitRows = await db
-    .select(communityCollectionAssetTraitEntityColumns)
-    .from(assetTrait)
-    .where(eq(assetTrait.assetId, collectionAsset.id))
-    .orderBy(asc(assetTrait.traitKey), asc(assetTrait.traitValue), asc(assetTrait.id))
-
   return toCommunityCollectionAssetDetailEntity({
     ...collectionAsset,
     metadataJson: parseStoredJson<Record<string, unknown>>(collectionAsset.metadataJson),
-    traits: traitRows.map((traitRow) =>
-      toCommunityCollectionAssetTrait({
-        groupId: traitRow.groupId,
-        groupLabel: traitRow.groupLabel,
-        value: traitRow.value,
-        valueLabel: traitRow.valueLabel,
-      }),
-    ),
+    traits: parseStoredAssetTraits(collectionAsset.traits),
   })
 }

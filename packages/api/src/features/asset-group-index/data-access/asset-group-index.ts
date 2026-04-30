@@ -1,6 +1,13 @@
 import { and, asc, count, desc, eq, inArray, lt, lte, sql } from 'drizzle-orm'
 import { db, type Database } from '@tokengator/db'
-import { asset, assetGroup, assetGroupIndexRun, assetTrait } from '@tokengator/db/schema/asset'
+import {
+  asset,
+  assetGroup,
+  assetGroupIndexRun,
+  assetTraitGroup,
+  assetTraitMembership,
+  assetTraitValue,
+} from '@tokengator/db/schema/asset'
 import {
   createHeliusResolvers,
   createRealmsApiAdapter,
@@ -145,6 +152,13 @@ interface AssetGroupFacetTotals {
   }
 }
 
+interface StoredAssetTrait {
+  groupId: string
+  groupLabel: string
+  value: string
+  valueLabel: string
+}
+
 interface StoredAssetRow {
   address: string
   amount: string
@@ -167,16 +181,7 @@ interface StoredAssetRow {
   raw: null
   resolverId: string
   resolverKind: ResolverKind
-}
-
-interface StoredAssetTraitRow {
-  assetGroupId: string
-  assetId: string
-  id: string
-  traitKey: string
-  traitLabel: string
-  traitValue: string
-  traitValueLabel: string
+  traits: string | null
 }
 
 const HELIUS_NETWORK_BY_CLUSTER = {
@@ -210,6 +215,34 @@ function buildAssetGroupIndexRunErrorPayload(error: unknown) {
 
 function getExcludedColumn(columnName: string) {
   return sql.raw(`excluded.${columnName}`)
+}
+
+function getNextLookupLabel(columnName: string) {
+  return sql<string>`case
+    when ${getExcludedColumn(columnName)} <> '' and ${getExcludedColumn(columnName)} < ${sql.raw(columnName)}
+    then ${getExcludedColumn(columnName)}
+    else ${sql.raw(columnName)}
+  end`
+}
+
+function getTraitLookupKey(input: { groupId: string; value: string }) {
+  return JSON.stringify([input.groupId, input.value])
+}
+
+function getTraitValueLookupKey(input: { groupRecordId: string; value: string }) {
+  return JSON.stringify([input.groupRecordId, input.value])
+}
+
+function getSmallerNonEmptyLabel(left: string | null, right: string) {
+  if (!right) {
+    return left
+  }
+
+  if (!left || right < left) {
+    return right
+  }
+
+  return left
 }
 
 function getResolverInput(entry: AssetGroupRecordForIndexing): ResolverInput<
@@ -247,11 +280,62 @@ function getResolverInput(entry: AssetGroupRecordForIndexing): ResolverInput<
   }
 }
 
+function normalizeStoredAssetTraits(traits: OwnershipTrait[]): StoredAssetTrait[] {
+  const entriesByKey = new Map<
+    string,
+    {
+      groupId: string
+      groupLabel: string | null
+      value: string
+      valueLabel: string | null
+    }
+  >()
+
+  for (const trait of traits) {
+    const groupId = trait.groupId.trim()
+    const groupLabel = trait.groupLabel.trim()
+    const value = trait.value.trim()
+    const valueLabel = trait.valueLabel.trim()
+
+    if (!groupId || !value) {
+      continue
+    }
+
+    const key = getTraitLookupKey({ groupId, value })
+    const entry = entriesByKey.get(key) ?? {
+      groupId,
+      groupLabel: null,
+      value,
+      valueLabel: null,
+    }
+
+    entry.groupLabel = getSmallerNonEmptyLabel(entry.groupLabel, groupLabel)
+    entry.valueLabel = getSmallerNonEmptyLabel(entry.valueLabel, valueLabel)
+    entriesByKey.set(key, entry)
+  }
+
+  return [...entriesByKey.values()]
+    .map((entry) => ({
+      groupId: entry.groupId,
+      groupLabel: entry.groupLabel ?? entry.groupId,
+      value: entry.value,
+      valueLabel: entry.valueLabel ?? entry.value,
+    }))
+    .sort(
+      (left, right) =>
+        left.groupId.localeCompare(right.groupId) ||
+        left.value.localeCompare(right.value) ||
+        left.groupLabel.localeCompare(right.groupLabel) ||
+        left.valueLabel.localeCompare(right.valueLabel),
+    )
+}
+
 function getStoredRow(input: {
   assetGroupId: string
   resolverKind: ResolverKind
   row: ReturnType<typeof normalizeOwnershipRows>[number]
   startedAt: Date
+  traits: StoredAssetTrait[]
 }): StoredAssetRow | null {
   const address = input.row.assetId.trim()
   const owner = input.row.owner.trim()
@@ -287,6 +371,7 @@ function getStoredRow(input: {
     raw: null,
     resolverId: input.row.resolverId,
     resolverKind: input.resolverKind,
+    traits: serializeJson(input.traits),
   }
 }
 
@@ -297,26 +382,37 @@ async function getStoredFacetTotals(input: {
   const database = input.database ?? db
   const facetOptionRows = await database
     .select({
-      total: sql<number>`cast(count(distinct ${assetTrait.assetId}) as integer)`,
-      traitKey: assetTrait.traitKey,
-      traitLabel: sql<string>`min(${assetTrait.traitLabel})`,
-      traitValue: assetTrait.traitValue,
-      traitValueLabel: sql<string>`min(${assetTrait.traitValueLabel})`,
+      total: sql<number>`cast(count(distinct ${assetTraitMembership.assetId}) as integer)`,
+      traitKey: assetTraitGroup.value,
+      traitLabel: assetTraitGroup.label,
+      traitValue: assetTraitValue.value,
+      traitValueLabel: assetTraitValue.label,
     })
-    .from(assetTrait)
-    .where(eq(assetTrait.assetGroupId, input.assetGroupId))
-    .groupBy(assetTrait.traitKey, assetTrait.traitValue)
-    .orderBy(asc(assetTrait.traitKey), asc(assetTrait.traitValue))
+    .from(assetTraitMembership)
+    .innerJoin(assetTraitValue, eq(assetTraitValue.id, assetTraitMembership.valueId))
+    .innerJoin(assetTraitGroup, eq(assetTraitGroup.id, assetTraitValue.groupId))
+    .where(eq(assetTraitMembership.assetGroupId, input.assetGroupId))
+    .groupBy(
+      assetTraitGroup.id,
+      assetTraitGroup.value,
+      assetTraitGroup.label,
+      assetTraitValue.id,
+      assetTraitValue.value,
+      assetTraitValue.label,
+    )
+    .orderBy(asc(assetTraitGroup.value), asc(assetTraitValue.value))
   const facetGroupRows = await database
     .select({
-      total: sql<number>`cast(count(distinct ${assetTrait.assetId}) as integer)`,
-      traitKey: assetTrait.traitKey,
-      traitLabel: sql<string>`min(${assetTrait.traitLabel})`,
+      total: sql<number>`cast(count(distinct ${assetTraitMembership.assetId}) as integer)`,
+      traitKey: assetTraitGroup.value,
+      traitLabel: assetTraitGroup.label,
     })
-    .from(assetTrait)
-    .where(eq(assetTrait.assetGroupId, input.assetGroupId))
-    .groupBy(assetTrait.traitKey)
-    .orderBy(asc(assetTrait.traitKey))
+    .from(assetTraitMembership)
+    .innerJoin(assetTraitValue, eq(assetTraitValue.id, assetTraitMembership.valueId))
+    .innerJoin(assetTraitGroup, eq(assetTraitGroup.id, assetTraitValue.groupId))
+    .where(eq(assetTraitMembership.assetGroupId, input.assetGroupId))
+    .groupBy(assetTraitGroup.id, assetTraitGroup.value, assetTraitGroup.label)
+    .orderBy(asc(assetTraitGroup.value))
   const facetTotals: AssetGroupFacetTotals = {}
 
   for (const facetGroupRow of facetGroupRows) {
@@ -391,23 +487,8 @@ function getUpsertSet() {
     raw: getExcludedColumn(asset.raw.name),
     resolverId: getExcludedColumn(asset.resolverId.name),
     resolverKind: getExcludedColumn(asset.resolverKind.name),
+    traits: getExcludedColumn(asset.traits.name),
   }
-}
-
-function getStoredTraitRows(input: {
-  assetGroupId: string
-  assetId: string
-  traits?: OwnershipTrait[]
-}): StoredAssetTraitRow[] {
-  return (input.traits ?? []).map((trait) => ({
-    assetGroupId: input.assetGroupId,
-    assetId: input.assetId,
-    id: crypto.randomUUID(),
-    traitKey: trait.groupId,
-    traitLabel: trait.groupLabel,
-    traitValue: trait.value,
-    traitValueLabel: trait.valueLabel,
-  }))
 }
 
 function toAssetGroupIndexRunRecord(row: {
@@ -509,7 +590,7 @@ async function executeAssetGroupIndex(
           string,
           {
             row: StoredAssetRow
-            traits: OwnershipTrait[]
+            traits: StoredAssetTrait[]
           }
         >()
         let duplicateRows = 0
@@ -521,11 +602,13 @@ async function executeAssetGroupIndex(
             continue
           }
 
+          const traits = normalizeStoredAssetTraits(row.traits ?? [])
           const storedRow = getStoredRow({
             assetGroupId: options.assetGroup.id,
             resolverKind: resolver.kind,
             row,
             startedAt: options.startedAt,
+            traits,
           })
 
           if (!storedRow) {
@@ -539,7 +622,7 @@ async function executeAssetGroupIndex(
 
           pageRows.set(storedRow.indexedAssetId, {
             row: storedRow,
-            traits: row.traits ?? [],
+            traits,
           })
         }
 
@@ -589,12 +672,24 @@ async function executeAssetGroupIndex(
           ...row,
           id: existingAssetIdsByIndexedAssetId.get(row.indexedAssetId) ?? row.id,
         }))
-        const traitRows = rows.flatMap(({ row, traits }) =>
-          getStoredTraitRows({
-            assetGroupId: options.assetGroup.id,
-            assetId: existingAssetIdsByIndexedAssetId.get(row.indexedAssetId) ?? row.id,
-            traits,
-          }),
+        const traitGroupRowsByValue = new Map<string, { assetGroupId: string; label: string; value: string }>()
+
+        for (const { traits } of rows) {
+          for (const trait of traits) {
+            const existingTraitGroupRow = traitGroupRowsByValue.get(trait.groupId)
+            const label =
+              getSmallerNonEmptyLabel(existingTraitGroupRow?.label ?? null, trait.groupLabel) ?? trait.groupId
+
+            traitGroupRowsByValue.set(trait.groupId, {
+              assetGroupId: options.assetGroup.id,
+              label,
+              value: trait.groupId,
+            })
+          }
+        }
+
+        const traitGroupRows = [...traitGroupRowsByValue.values()].sort((left, right) =>
+          left.value.localeCompare(right.value),
         )
 
         await options.leaseController.ensureOwned()
@@ -610,15 +705,170 @@ async function executeAssetGroupIndex(
             assetRows.map((row) => row.id),
             getSqliteChunkSize(1),
           )) {
-            await transaction.delete(assetTrait).where(inArray(assetTrait.assetId, assetIdChunk))
+            await transaction.delete(assetTraitMembership).where(inArray(assetTraitMembership.assetId, assetIdChunk))
           }
 
-          if (traitRows.length > 0) {
-            for (const traitRowChunk of splitIntoChunks(
-              traitRows,
-              getSqliteChunkSize(Object.keys(traitRows[0]!).length),
+          if (traitGroupRows.length > 0) {
+            for (const traitGroupRowChunk of splitIntoChunks(
+              traitGroupRows,
+              getSqliteChunkSize(Object.keys(traitGroupRows[0]!).length),
             )) {
-              await transaction.insert(assetTrait).values(traitRowChunk)
+              await transaction
+                .insert(assetTraitGroup)
+                .values(traitGroupRowChunk)
+                .onConflictDoUpdate({
+                  set: {
+                    label: getNextLookupLabel(assetTraitGroup.label.name),
+                  },
+                  target: [assetTraitGroup.assetGroupId, assetTraitGroup.value],
+                })
+            }
+
+            const traitGroupRecordRows = []
+
+            for (const traitGroupValueChunk of splitIntoChunks(
+              traitGroupRows.map((traitGroupRow) => traitGroupRow.value),
+              getSqliteChunkSize(2),
+            )) {
+              traitGroupRecordRows.push(
+                ...(await transaction
+                  .select({
+                    id: assetTraitGroup.id,
+                    value: assetTraitGroup.value,
+                  })
+                  .from(assetTraitGroup)
+                  .where(
+                    and(
+                      eq(assetTraitGroup.assetGroupId, options.assetGroup.id),
+                      inArray(assetTraitGroup.value, traitGroupValueChunk),
+                    ),
+                  )),
+              )
+            }
+
+            const traitGroupRecordIdByValue = new Map(
+              traitGroupRecordRows.map((traitGroupRecordRow) => [traitGroupRecordRow.value, traitGroupRecordRow.id]),
+            )
+            const traitValueRowsByKey = new Map<
+              string,
+              { assetGroupId: string; groupId: string; label: string; value: string }
+            >()
+
+            for (const { traits } of rows) {
+              for (const trait of traits) {
+                const groupRecordId = traitGroupRecordIdByValue.get(trait.groupId)
+
+                if (!groupRecordId) {
+                  throw new Error(`Missing trait group lookup row for ${trait.groupId}.`)
+                }
+
+                const key = getTraitValueLookupKey({
+                  groupRecordId,
+                  value: trait.value,
+                })
+                const existingTraitValueRow = traitValueRowsByKey.get(key)
+                const label =
+                  getSmallerNonEmptyLabel(existingTraitValueRow?.label ?? null, trait.valueLabel) ?? trait.value
+
+                traitValueRowsByKey.set(key, {
+                  assetGroupId: options.assetGroup.id,
+                  groupId: groupRecordId,
+                  label,
+                  value: trait.value,
+                })
+              }
+            }
+
+            const traitValueRows = [...traitValueRowsByKey.values()].sort(
+              (left, right) => left.groupId.localeCompare(right.groupId) || left.value.localeCompare(right.value),
+            )
+
+            for (const traitValueRowChunk of splitIntoChunks(
+              traitValueRows,
+              getSqliteChunkSize(Object.keys(traitValueRows[0]!).length),
+            )) {
+              await transaction
+                .insert(assetTraitValue)
+                .values(traitValueRowChunk)
+                .onConflictDoUpdate({
+                  set: {
+                    label: getNextLookupLabel(assetTraitValue.label.name),
+                  },
+                  target: [assetTraitValue.groupId, assetTraitValue.value],
+                })
+            }
+
+            const traitValueRecordRows = []
+            const traitGroupRecordIds = [...new Set(traitValueRows.map((traitValueRow) => traitValueRow.groupId))].sort(
+              (left, right) => left.localeCompare(right),
+            )
+            const traitValues = [...new Set(traitValueRows.map((traitValueRow) => traitValueRow.value))].sort(
+              (left, right) => left.localeCompare(right),
+            )
+
+            for (const traitGroupRecordIdChunk of splitIntoChunks(traitGroupRecordIds, getSqliteChunkSize(2))) {
+              const traitValueChunkSize = Math.max(1, getSqliteChunkSize(1) - traitGroupRecordIdChunk.length - 1)
+
+              for (const traitValueChunk of splitIntoChunks(traitValues, traitValueChunkSize)) {
+                traitValueRecordRows.push(
+                  ...(await transaction
+                    .select({
+                      groupId: assetTraitValue.groupId,
+                      id: assetTraitValue.id,
+                      value: assetTraitValue.value,
+                    })
+                    .from(assetTraitValue)
+                    .where(
+                      and(
+                        eq(assetTraitValue.assetGroupId, options.assetGroup.id),
+                        inArray(assetTraitValue.groupId, traitGroupRecordIdChunk),
+                        inArray(assetTraitValue.value, traitValueChunk),
+                      ),
+                    )),
+                )
+              }
+            }
+
+            const traitValueRecordIdByKey = new Map(
+              traitValueRecordRows.map((traitValueRecordRow) => [
+                getTraitValueLookupKey({
+                  groupRecordId: traitValueRecordRow.groupId,
+                  value: traitValueRecordRow.value,
+                }),
+                traitValueRecordRow.id,
+              ]),
+            )
+            const traitMembershipRows = assetRows.flatMap((row, index) => {
+              const sourceTraits = rows[index]?.traits ?? []
+
+              return sourceTraits.map((trait) => {
+                const groupRecordId = traitGroupRecordIdByValue.get(trait.groupId)
+                const valueId = groupRecordId
+                  ? traitValueRecordIdByKey.get(
+                      getTraitValueLookupKey({
+                        groupRecordId,
+                        value: trait.value,
+                      }),
+                    )
+                  : null
+
+                if (!groupRecordId || !valueId) {
+                  throw new Error(`Missing trait value lookup row for ${trait.groupId}:${trait.value}.`)
+                }
+
+                return {
+                  assetGroupId: options.assetGroup.id,
+                  assetId: row.id,
+                  valueId,
+                }
+              })
+            })
+
+            for (const traitMembershipRowChunk of splitIntoChunks(
+              traitMembershipRows,
+              getSqliteChunkSize(Object.keys(traitMembershipRows[0]!).length),
+            )) {
+              await transaction.insert(assetTraitMembership).values(traitMembershipRowChunk)
             }
           }
         })

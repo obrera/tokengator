@@ -280,20 +280,6 @@ describe('admin organization update', () => {
         }),
       ).rejects.toThrow()
     }
-
-    await expect(
-      (async () => {
-        await database.insert(authSchema.organization).values({
-          createdAt: new Date('2026-04-11T00:00:00.000Z'),
-          description: 'a'.repeat(257),
-          id: 'org-beta',
-          logo: null,
-          metadata: null,
-          name: 'Beta DAO',
-          slug: 'beta-dao',
-        })
-      })(),
-    ).rejects.toThrow()
   })
 
   test('adds new members and updates existing member roles', async () => {

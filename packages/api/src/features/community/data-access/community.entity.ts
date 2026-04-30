@@ -1,8 +1,9 @@
 import type { ResolverKind } from '@tokengator/indexer'
-import { asset, assetTrait } from '@tokengator/db/schema/asset'
+import { asset } from '@tokengator/db/schema/asset'
 import { organization } from '@tokengator/db/schema/auth'
 
 import { getAssetGroupImageUrl } from '../../../lib/asset-group-image-url'
+import { parseStoredJson } from '../../../lib/stored-json'
 
 export const communityCollectionAssetEntityColumns = {
   address: asset.address,
@@ -11,6 +12,7 @@ export const communityCollectionAssetEntityColumns = {
   metadataName: asset.metadataName,
   metadataSymbol: asset.metadataSymbol,
   owner: asset.owner,
+  traits: asset.traits,
 }
 
 export const communityCollectionAssetDetailEntityColumns = {
@@ -22,14 +24,7 @@ export const communityCollectionAssetDetailEntityColumns = {
   metadataName: asset.metadataName,
   metadataSymbol: asset.metadataSymbol,
   owner: asset.owner,
-}
-
-export const communityCollectionAssetTraitEntityColumns = {
-  assetId: assetTrait.assetId,
-  groupId: assetTrait.traitKey,
-  groupLabel: assetTrait.traitLabel,
-  value: assetTrait.traitValue,
-  valueLabel: assetTrait.traitValueLabel,
+  traits: asset.traits,
 }
 
 export const communityEntityColumns = {
@@ -155,6 +150,51 @@ export function toCommunityCollectionAssetDetailEntity(input: {
 
 export function toCommunityCollectionAssetTrait(input: CommunityCollectionAssetTrait) {
   return input
+}
+
+export function parseStoredAssetTraits(value: string | null): CommunityCollectionAssetTrait[] {
+  const parsedValue = parseStoredJson<unknown>(value)
+
+  if (!Array.isArray(parsedValue)) {
+    return []
+  }
+
+  const traits: CommunityCollectionAssetTrait[] = []
+
+  for (const entry of parsedValue) {
+    if (
+      !entry ||
+      typeof entry !== 'object' ||
+      !('groupId' in entry) ||
+      !('groupLabel' in entry) ||
+      !('value' in entry) ||
+      !('valueLabel' in entry)
+    ) {
+      return []
+    }
+
+    const trait = entry as Record<string, unknown>
+
+    if (
+      typeof trait.groupId !== 'string' ||
+      typeof trait.groupLabel !== 'string' ||
+      typeof trait.value !== 'string' ||
+      typeof trait.valueLabel !== 'string'
+    ) {
+      return []
+    }
+
+    traits.push(
+      toCommunityCollectionAssetTrait({
+        groupId: trait.groupId,
+        groupLabel: trait.groupLabel,
+        value: trait.value,
+        valueLabel: trait.valueLabel,
+      }),
+    )
+  }
+
+  return traits
 }
 
 export function toCommunityCollectionOwnerCandidateEntity(input: {
