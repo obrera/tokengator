@@ -60,6 +60,52 @@ export type CommunityCollectionFacetTotals = Record<
   }
 >
 
+export type CommunityCollectionInsightsTraitOptionEntity = {
+  label: string
+  total: number
+  value: string
+}
+
+export type CommunityCollectionInsightsTraitGroupEntity = {
+  groupId: string
+  label: string
+  options: CommunityCollectionInsightsTraitOptionEntity[]
+  total: number
+}
+
+export type CommunityCollectionLeaderboardAssetEntity = {
+  address: string
+  id: string
+  metadataImageUrl: string | null
+  metadataName: string | null
+  metadataSymbol: string | null
+}
+
+export type CommunityCollectionLeaderboardUserEntity = {
+  id: string
+  image: string | null
+  name: string
+  username: string | null
+}
+
+export type CommunityCollectionLeaderboardWalletEntity = {
+  address: string
+  assets: CommunityCollectionLeaderboardAssetEntity[]
+  assetTotal: number
+  id: string | null
+  name: string | null
+}
+
+export type CommunityCollectionLeaderboardHolderEntity = {
+  assetTotal: number
+  displayName: string
+  holderId: string
+  kind: 'user' | 'wallet'
+  rank: number
+  user: CommunityCollectionLeaderboardUserEntity | null
+  wallets: CommunityCollectionLeaderboardWalletEntity[]
+}
+
 export type CommunityMarketplaceAvailabilityEntity = {
   magicEden: {
     enabled: boolean
@@ -217,6 +263,15 @@ export type CommunityEntity = ReturnType<typeof toCommunityEntity>
 export type CommunityGetBySlugResult = Omit<CommunityDetailEntity, 'roles'> & {
   marketplace: CommunityMarketplaceAvailabilityEntity
   roles: Array<CommunityRoleEntity & { assetMarketplace: CommunityRoleAssetMarketplaceEntity }>
+}
+export type CommunityGetCollectionInsightsResult = {
+  assetTotal: number
+  traitGroups: CommunityCollectionInsightsTraitGroupEntity[]
+}
+export type CommunityListCollectionLeaderboardResult = {
+  assetTotal: number
+  holderTotal: number
+  holders: CommunityCollectionLeaderboardHolderEntity[]
 }
 export type CommunityListCollectionAssetsResult = ReturnType<typeof toCommunityListCollectionAssetsResult>
 export type CommunityListResult = {

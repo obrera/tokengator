@@ -34,7 +34,6 @@ describe('CommunityFeatureCollectionDetail', () => {
     const markup = renderToStaticMarkup(
       <CommunityFeatureCollectionDetail
         address="collection-missing"
-        initialCollectionAssets={null}
         initialCommunity={community}
         search={{
           facets: undefined,
@@ -42,7 +41,9 @@ describe('CommunityFeatureCollectionDetail', () => {
           owner: undefined,
           query: undefined,
         }}
-      />,
+      >
+        <div />
+      </CommunityFeatureCollectionDetail>,
     )
 
     expect(markup).toContain('Collection Not Found')

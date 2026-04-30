@@ -8,6 +8,8 @@ import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer
 
 type AssetSchema = typeof import('@tokengator/db/schema/asset')
 type AuthSchema = typeof import('@tokengator/db/schema/auth')
+type CommunityListCollectionLeaderboard =
+  typeof import('../src/features/community/data-access/community-list-collection-leaderboard').communityListCollectionLeaderboard
 type CommunityRoleSchema = typeof import('@tokengator/db/schema/community-role')
 type CommunityRouter = typeof import('../src/features/community/feature/community-router').communityRouter
 type DatabaseClient = (typeof import('@tokengator/db'))['db']
@@ -49,6 +51,7 @@ const TEST_DATABASE_URL = pathToFileURL(resolve(TEST_DATABASE_DIR, 'community.sq
 
 let assetSchema: AssetSchema
 let authSchema: AuthSchema
+let communityListCollectionLeaderboard: CommunityListCollectionLeaderboard
 let communityRoleSchema: CommunityRoleSchema
 let communityRouter: CommunityRouter
 let database: DatabaseClient
@@ -401,6 +404,8 @@ beforeAll(async () => {
   ;({ db: database } = await import('@tokengator/db'))
   assetSchema = await import('@tokengator/db/schema/asset')
   authSchema = await import('@tokengator/db/schema/auth')
+  ;({ communityListCollectionLeaderboard } =
+    await import('../src/features/community/data-access/community-list-collection-leaderboard'))
   communityRoleSchema = await import('@tokengator/db/schema/community-role')
   ;({ communityRouter } = await import('../src/features/community/feature/community-router'))
 }, 30_000)
@@ -2351,6 +2356,529 @@ describe('community routes', () => {
         },
       }),
     })
+  })
+
+  test('getCollectionInsights returns indexed asset totals and trait breakdowns', async () => {
+    await insertOrganization({
+      id: 'org-alpha',
+      name: 'Alpha DAO',
+      slug: 'alpha-dao',
+    })
+    await insertTeam({
+      id: 'team-alpha',
+      name: 'Alpha Team',
+      organizationId: 'org-alpha',
+    })
+    await insertAssetGroup({
+      address: 'collection-alpha',
+      id: 'asset-group-alpha',
+      label: 'Alpha Collection',
+      type: 'collection',
+    })
+    await insertCommunityRole({
+      enabled: true,
+      id: 'community-role-alpha',
+      matchMode: 'all',
+      name: 'Collectors',
+      organizationId: 'org-alpha',
+      slug: 'collectors',
+      teamId: 'team-alpha',
+    })
+    await insertCommunityRoleCondition({
+      assetGroupId: 'asset-group-alpha',
+      communityRoleId: 'community-role-alpha',
+      minimumAmount: '1',
+    })
+    await insertAsset({
+      address: 'mint-alpha',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-alpha',
+      owner: 'owner-alpha',
+      traits: [
+        {
+          groupId: 'background',
+          groupLabel: 'Background',
+          value: 'forest',
+          valueLabel: 'Forest',
+        },
+        {
+          groupId: 'hat',
+          groupLabel: 'Hat',
+          value: 'cap',
+          valueLabel: 'Cap',
+        },
+      ],
+    })
+    await insertAsset({
+      address: 'mint-beta',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-beta',
+      owner: 'owner-beta',
+      traits: [
+        {
+          groupId: 'background',
+          groupLabel: 'Background',
+          value: 'desert',
+          valueLabel: 'Desert',
+        },
+      ],
+    })
+    await insertAsset({
+      address: 'mint-gamma',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-gamma',
+      owner: 'owner-gamma',
+      traits: [
+        {
+          groupId: 'background',
+          groupLabel: 'Background',
+          value: 'forest',
+          valueLabel: 'Forest',
+        },
+      ],
+    })
+
+    const result = await communityRouter.getCollectionInsights.callable(
+      createCallContext({
+        userId: 'viewer-user-id',
+        username: 'viewer',
+      }),
+    )({
+      address: 'collection-alpha',
+      slug: 'alpha-dao',
+    })
+
+    expect(result).toEqual({
+      assetTotal: 3,
+      traitGroups: [
+        {
+          groupId: 'background',
+          label: 'Background',
+          options: [
+            {
+              label: 'Forest',
+              total: 2,
+              value: 'forest',
+            },
+            {
+              label: 'Desert',
+              total: 1,
+              value: 'desert',
+            },
+          ],
+          total: 3,
+        },
+        {
+          groupId: 'hat',
+          label: 'Hat',
+          options: [
+            {
+              label: 'Cap',
+              total: 1,
+              value: 'cap',
+            },
+          ],
+          total: 1,
+        },
+      ],
+    })
+  })
+
+  test('listCollectionLeaderboard ranks profile groups and keeps unlinked wallets separate', async () => {
+    await insertOrganization({
+      id: 'org-alpha',
+      name: 'Alpha DAO',
+      slug: 'alpha-dao',
+    })
+    await insertTeam({
+      id: 'team-alpha',
+      name: 'Alpha Team',
+      organizationId: 'org-alpha',
+    })
+    await insertAssetGroup({
+      address: 'collection-alpha',
+      id: 'asset-group-alpha',
+      label: 'Alpha Collection',
+      type: 'collection',
+    })
+    await insertUser({
+      id: 'user-alpha-owner',
+      name: 'Alpha Owner',
+      username: 'alpha-owner',
+    })
+    await insertUser({
+      id: 'user-beta-owner',
+      name: 'Beta Owner',
+      username: 'beta-owner',
+    })
+    await insertCommunityRole({
+      enabled: true,
+      id: 'community-role-alpha',
+      matchMode: 'all',
+      name: 'Collectors',
+      organizationId: 'org-alpha',
+      slug: 'collectors',
+      teamId: 'team-alpha',
+    })
+    await insertCommunityRoleCondition({
+      assetGroupId: 'asset-group-alpha',
+      communityRoleId: 'community-role-alpha',
+      minimumAmount: '1',
+    })
+    await insertSolanaWallet({
+      address: 'owner-alpha-a',
+      id: 'wallet-alpha-a',
+      userId: 'user-alpha-owner',
+    })
+    await insertSolanaWallet({
+      address: 'owner-alpha-b',
+      id: 'wallet-alpha-b',
+      userId: 'user-alpha-owner',
+    })
+    await insertSolanaWallet({
+      address: 'owner-beta',
+      id: 'wallet-beta',
+      userId: 'user-beta-owner',
+    })
+    await insertAsset({
+      address: 'mint-alpha-a',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-alpha-a',
+      owner: 'owner-alpha-a',
+    })
+    await insertAsset({
+      address: 'mint-alpha-b',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-alpha-b',
+      owner: 'owner-alpha-a',
+    })
+    await insertAsset({
+      address: 'mint-alpha-c',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-alpha-c',
+      owner: 'owner-alpha-b',
+    })
+    await insertAsset({
+      address: 'mint-beta',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-beta',
+      owner: 'owner-beta',
+    })
+    await insertAsset({
+      address: 'mint-zed-a',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-zed-a',
+      owner: 'owner-zed',
+    })
+    await insertAsset({
+      address: 'mint-zed-b',
+      assetGroupId: 'asset-group-alpha',
+      id: 'asset-zed-b',
+      owner: 'owner-zed',
+    })
+
+    const result = await communityRouter.listCollectionLeaderboard.callable(
+      createCallContext({
+        userId: 'viewer-user-id',
+        username: 'viewer',
+      }),
+    )({
+      address: 'collection-alpha',
+      slug: 'alpha-dao',
+    })
+
+    expect(result).toEqual({
+      assetTotal: 6,
+      holders: [
+        {
+          assetTotal: 3,
+          displayName: '@alpha-owner',
+          holderId: 'user:user-alpha-owner',
+          kind: 'user',
+          rank: 1,
+          user: {
+            id: 'user-alpha-owner',
+            image: null,
+            name: 'Alpha Owner',
+            username: 'alpha-owner',
+          },
+          wallets: [
+            {
+              address: 'owner-alpha-a',
+              assets: [
+                {
+                  address: 'mint-alpha-a',
+                  id: 'asset-alpha-a',
+                  metadataImageUrl: null,
+                  metadataName: null,
+                  metadataSymbol: null,
+                },
+                {
+                  address: 'mint-alpha-b',
+                  id: 'asset-alpha-b',
+                  metadataImageUrl: null,
+                  metadataName: null,
+                  metadataSymbol: null,
+                },
+              ],
+              assetTotal: 2,
+              id: 'wallet-alpha-a',
+              name: null,
+            },
+            {
+              address: 'owner-alpha-b',
+              assets: [
+                {
+                  address: 'mint-alpha-c',
+                  id: 'asset-alpha-c',
+                  metadataImageUrl: null,
+                  metadataName: null,
+                  metadataSymbol: null,
+                },
+              ],
+              assetTotal: 1,
+              id: 'wallet-alpha-b',
+              name: null,
+            },
+          ],
+        },
+        {
+          assetTotal: 2,
+          displayName: 'owner-zed',
+          holderId: 'wallet:owner-zed',
+          kind: 'wallet',
+          rank: 2,
+          user: null,
+          wallets: [
+            {
+              address: 'owner-zed',
+              assets: [
+                {
+                  address: 'mint-zed-a',
+                  id: 'asset-zed-a',
+                  metadataImageUrl: null,
+                  metadataName: null,
+                  metadataSymbol: null,
+                },
+                {
+                  address: 'mint-zed-b',
+                  id: 'asset-zed-b',
+                  metadataImageUrl: null,
+                  metadataName: null,
+                  metadataSymbol: null,
+                },
+              ],
+              assetTotal: 2,
+              id: null,
+              name: null,
+            },
+          ],
+        },
+        {
+          assetTotal: 1,
+          displayName: '@beta-owner',
+          holderId: 'user:user-beta-owner',
+          kind: 'user',
+          rank: 3,
+          user: {
+            id: 'user-beta-owner',
+            image: null,
+            name: 'Beta Owner',
+            username: 'beta-owner',
+          },
+          wallets: [
+            {
+              address: 'owner-beta',
+              assets: [
+                {
+                  address: 'mint-beta',
+                  id: 'asset-beta',
+                  metadataImageUrl: null,
+                  metadataName: null,
+                  metadataSymbol: null,
+                },
+              ],
+              assetTotal: 1,
+              id: 'wallet-beta',
+              name: null,
+            },
+          ],
+        },
+      ],
+      holderTotal: 3,
+    })
+  })
+
+  test('listCollectionLeaderboard clamps default and explicit holder limits', async () => {
+    await insertOrganization({
+      id: 'org-alpha',
+      name: 'Alpha DAO',
+      slug: 'alpha-dao',
+    })
+    await insertTeam({
+      id: 'team-alpha',
+      name: 'Alpha Team',
+      organizationId: 'org-alpha',
+    })
+    await insertAssetGroup({
+      address: 'collection-alpha',
+      id: 'asset-group-alpha',
+      label: 'Alpha Collection',
+      type: 'collection',
+    })
+    await insertCommunityRole({
+      enabled: true,
+      id: 'community-role-alpha',
+      matchMode: 'all',
+      name: 'Collectors',
+      organizationId: 'org-alpha',
+      slug: 'collectors',
+      teamId: 'team-alpha',
+    })
+    await insertCommunityRoleCondition({
+      assetGroupId: 'asset-group-alpha',
+      communityRoleId: 'community-role-alpha',
+      minimumAmount: '1',
+    })
+
+    for (let index = 0; index < 101; index++) {
+      const paddedIndex = String(index).padStart(3, '0')
+
+      await insertAsset({
+        address: `mint-${paddedIndex}`,
+        assetGroupId: 'asset-group-alpha',
+        id: `asset-${paddedIndex}`,
+        owner: `owner-${paddedIndex}`,
+      })
+    }
+
+    const defaultResult = await communityRouter.listCollectionLeaderboard.callable(
+      createCallContext({
+        userId: 'viewer-user-id',
+        username: 'viewer',
+      }),
+    )({
+      address: 'collection-alpha',
+      slug: 'alpha-dao',
+    })
+    const expandedResult = await communityRouter.listCollectionLeaderboard.callable(
+      createCallContext({
+        userId: 'viewer-user-id',
+        username: 'viewer',
+      }),
+    )({
+      address: 'collection-alpha',
+      limit: 101,
+      slug: 'alpha-dao',
+    })
+    const minimumResult = await communityListCollectionLeaderboard({
+      address: 'collection-alpha',
+      limit: 0,
+      slug: 'alpha-dao',
+    })
+    const negativeResult = await communityListCollectionLeaderboard({
+      address: 'collection-alpha',
+      limit: -1,
+      slug: 'alpha-dao',
+    })
+
+    expect(defaultResult.assetTotal).toBe(101)
+    expect(defaultResult.holderTotal).toBe(101)
+    expect(defaultResult.holders.length).toBe(100)
+    expect(defaultResult.holders.at(-1)?.rank).toBe(100)
+    expect(defaultResult.holders.at(-1)?.holderId).toBe('wallet:owner-099')
+    expect(expandedResult.holderTotal).toBe(101)
+    expect(expandedResult.holders.length).toBe(101)
+    expect(expandedResult.holders.at(-1)?.rank).toBe(101)
+    expect(expandedResult.holders.at(-1)?.holderId).toBe('wallet:owner-100')
+    expect(minimumResult?.holderTotal).toBe(101)
+    expect(minimumResult?.holders.length).toBe(1)
+    expect(minimumResult?.holders[0]?.holderId).toBe('wallet:owner-000')
+    expect(negativeResult?.holderTotal).toBe(101)
+    expect(negativeResult?.holders.length).toBe(1)
+    expect(negativeResult?.holders[0]?.holderId).toBe('wallet:owner-000')
+  })
+
+  test('collection analytics return not found for unknown collection addresses', async () => {
+    await insertOrganization({
+      id: 'org-alpha',
+      name: 'Alpha DAO',
+      slug: 'alpha-dao',
+    })
+    await insertTeam({
+      id: 'team-alpha',
+      name: 'Alpha Team',
+      organizationId: 'org-alpha',
+    })
+    await insertAssetGroup({
+      address: 'collection-alpha',
+      id: 'asset-group-alpha',
+      label: 'Alpha Collection',
+      type: 'collection',
+    })
+    await insertCommunityRole({
+      enabled: true,
+      id: 'community-role-alpha',
+      matchMode: 'all',
+      name: 'Collectors',
+      organizationId: 'org-alpha',
+      slug: 'collectors',
+      teamId: 'team-alpha',
+    })
+    await insertCommunityRoleCondition({
+      assetGroupId: 'asset-group-alpha',
+      communityRoleId: 'community-role-alpha',
+      minimumAmount: '1',
+    })
+
+    await expectORPCError(
+      communityRouter.getCollectionInsights.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
+        }),
+      )({
+        address: 'missing-collection',
+        slug: 'alpha-dao',
+      }),
+      {
+        code: 'NOT_FOUND',
+        message: 'Collection not found.',
+        status: 404,
+      },
+    )
+    await expectORPCError(
+      communityRouter.listCollectionLeaderboard.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
+        }),
+      )({
+        address: 'missing-collection',
+        slug: 'alpha-dao',
+      }),
+      {
+        code: 'NOT_FOUND',
+        message: 'Collection not found.',
+        status: 404,
+      },
+    )
+    await expectORPCError(
+      communityRouter.getCollectionInsights.callable(
+        createCallContext({
+          userId: 'viewer-user-id',
+          username: 'viewer',
+        }),
+      )({
+        address: 'collection-alpha',
+        slug: 'missing-community',
+      }),
+      {
+        code: 'NOT_FOUND',
+        message: 'Collection not found.',
+        status: 404,
+      },
+    )
   })
 
   test('listCollectionOwnerCandidates returns username and wallet suggestions in alphabetical order', async () => {

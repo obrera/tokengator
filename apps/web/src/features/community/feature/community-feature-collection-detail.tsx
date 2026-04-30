@@ -1,19 +1,20 @@
-import type { CommunityGetBySlugResult, CommunityListCollectionAssetsResult } from '@tokengator/sdk'
+import type { ReactNode } from 'react'
+import type { CommunityGetBySlugResult } from '@tokengator/sdk'
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 
 import type { CommunityCollectionAssetSearch } from '../util/community-collection-asset-search'
 
-import { CommunityFeatureCollectionAssets } from './community-feature-collection-assets'
+import { CommunityFeatureCollectionShell } from './community-feature-collection-shell'
 
 export function CommunityFeatureCollectionDetail({
   address,
-  initialCollectionAssets,
+  children,
   initialCommunity,
   search,
 }: {
   address: string
-  initialCollectionAssets: CommunityListCollectionAssetsResult | null
+  children: ReactNode
   initialCommunity: CommunityGetBySlugResult
   search: CommunityCollectionAssetSearch
 }) {
@@ -31,12 +32,13 @@ export function CommunityFeatureCollectionDetail({
   }
 
   return (
-    <CommunityFeatureCollectionAssets
+    <CommunityFeatureCollectionShell
       collections={initialCommunity.collections}
-      initialCollectionAssets={initialCollectionAssets}
       search={search}
       selectedCollection={selectedCollection}
       slug={initialCommunity.slug}
-    />
+    >
+      {children}
+    </CommunityFeatureCollectionShell>
   )
 }

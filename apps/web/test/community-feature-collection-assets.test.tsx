@@ -22,6 +22,22 @@ let CommunityFeatureCollectionAssets: typeof import('../src/features/community/f
 let domGlobalDescriptors: Array<[(typeof domGlobalKeys)[number], PropertyDescriptor | undefined]> = []
 let domWindow: Window | null = null
 const navigate = mock(() => Promise.resolve())
+const communityCollectionAssetsQueryMock = {
+  getCommunityCollectionAssetsQueryKey: (input: unknown) => ['collection-assets', input],
+  getCommunityCollectionAssetsQueryOptions: (input: unknown) => ({
+    input,
+    queryKey: ['collection-assets'],
+  }),
+  getCommunityCollectionAssetsRouteQueryOptions: (input: unknown) => ({
+    input,
+    queryKey: ['collection-assets'],
+  }),
+  useCommunityCollectionAssetsQuery: (_input: unknown, options?: { initialData?: unknown }) => ({
+    data: options?.initialData,
+    error: null,
+    isPending: false,
+  }),
+}
 
 function ensureDom() {
   if (typeof document !== 'undefined') {
@@ -97,13 +113,14 @@ beforeAll(async () => {
     ...TanStackReactRouter,
     useNavigate: () => navigate,
   }))
-  mock.module('../src/features/community/data-access/use-community-collection-assets-query', () => ({
-    useCommunityCollectionAssetsQuery: (_input: unknown, options?: { initialData?: unknown }) => ({
-      data: options?.initialData,
-      error: null,
-      isPending: false,
-    }),
-  }))
+  mock.module(
+    '../src/features/community/data-access/use-community-collection-assets-query',
+    () => communityCollectionAssetsQueryMock,
+  )
+  mock.module(
+    '../src/features/community/data-access/use-community-collection-assets-query.tsx',
+    () => communityCollectionAssetsQueryMock,
+  )
   mock.module('../src/features/community/data-access/use-community-collection-owner-candidates-query', () => ({
     useCommunityCollectionOwnerCandidatesQuery: () => ({
       data: [],
@@ -159,7 +176,7 @@ afterEach(() => {
 describe('CommunityFeatureCollectionAssets', () => {
   test('clears facets and text query when switching collections while preserving owner and grid', async () => {
     const { getCommunityCollectionSwitchNavigation } =
-      await import('../src/features/community/feature/community-feature-collection-assets')
+      await import('../src/features/community/feature/community-feature-collection-shell')
 
     expect(
       getCommunityCollectionSwitchNavigation({
@@ -173,6 +190,7 @@ describe('CommunityFeatureCollectionAssets', () => {
           query: 'perk',
         },
         slug: 'alpha-dao',
+        tab: 'assets',
       }),
     ).toEqual({
       params: {
@@ -186,6 +204,34 @@ describe('CommunityFeatureCollectionAssets', () => {
         query: undefined,
       },
       to: '/communities/$slug/collections/$address',
+    })
+
+    expect(
+      getCommunityCollectionSwitchNavigation({
+        address: 'collection-beta',
+        search: {
+          facets: {
+            background: ['forest'],
+          },
+          grid: 8,
+          owner: 'owner-alpha',
+          query: 'perk',
+        },
+        slug: 'alpha-dao',
+        tab: 'insights',
+      }),
+    ).toEqual({
+      params: {
+        address: 'collection-beta',
+        slug: 'alpha-dao',
+      },
+      search: {
+        facets: undefined,
+        grid: 8,
+        owner: undefined,
+        query: undefined,
+      },
+      to: '/communities/$slug/collections/$address/insights',
     })
   })
 
@@ -210,7 +256,6 @@ describe('CommunityFeatureCollectionAssets', () => {
 
     const view = render(
       <CommunityFeatureCollectionAssets
-        collections={collections}
         initialCollectionAssets={collectionAssets}
         search={{
           facets: {

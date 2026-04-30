@@ -5,6 +5,24 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 let CommunityCollectionAssetDialogContent: typeof import('../src/features/community/feature/community-feature-collection-asset-dialog').CommunityCollectionAssetDialogContent
 let CommunityFeatureCollectionDetail: typeof import('../src/features/community/feature/community-feature-collection-detail').CommunityFeatureCollectionDetail
+let CommunityFeatureCollectionAssets: typeof import('../src/features/community/feature/community-feature-collection-assets').CommunityFeatureCollectionAssets
+
+const communityCollectionAssetsQueryMock = {
+  getCommunityCollectionAssetsQueryKey: (input: unknown) => ['collection-assets', input],
+  getCommunityCollectionAssetsQueryOptions: (input: unknown) => ({
+    input,
+    queryKey: ['collection-assets'],
+  }),
+  getCommunityCollectionAssetsRouteQueryOptions: (input: unknown) => ({
+    input,
+    queryKey: ['collection-assets'],
+  }),
+  useCommunityCollectionAssetsQuery: (_input: unknown, options?: { initialData?: unknown }) => ({
+    data: options?.initialData,
+    error: null,
+    isPending: false,
+  }),
+}
 
 beforeAll(async () => {
   mock.module('@tanstack/react-router', () => ({
@@ -14,15 +32,19 @@ beforeAll(async () => {
         {children}
       </a>
     ),
+    useLocation: () => ({
+      pathname: '/communities/alpha-dao/collections/collection-alpha/asset/asset-alpha',
+    }),
     useNavigate: () => () => Promise.resolve(),
   }))
-  mock.module('../src/features/community/data-access/use-community-collection-assets-query', () => ({
-    useCommunityCollectionAssetsQuery: (_input: unknown, options?: { initialData?: unknown }) => ({
-      data: options?.initialData,
-      error: null,
-      isPending: false,
-    }),
-  }))
+  mock.module(
+    '../src/features/community/data-access/use-community-collection-assets-query',
+    () => communityCollectionAssetsQueryMock,
+  )
+  mock.module(
+    '../src/features/community/data-access/use-community-collection-assets-query.tsx',
+    () => communityCollectionAssetsQueryMock,
+  )
   mock.module('../src/features/community/data-access/use-community-collection-owner-candidates-query', () => ({
     useCommunityCollectionOwnerCandidatesQuery: () => ({
       data: [],
@@ -32,6 +54,8 @@ beforeAll(async () => {
 
   ;({ CommunityCollectionAssetDialogContent } =
     await import('../src/features/community/feature/community-feature-collection-asset-dialog'))
+  ;({ CommunityFeatureCollectionAssets } =
+    await import('../src/features/community/feature/community-feature-collection-assets'))
   ;({ CommunityFeatureCollectionDetail } =
     await import('../src/features/community/feature/community-feature-collection-detail'))
 })
@@ -85,7 +109,6 @@ describe('community collection asset deep-link composition', () => {
       <>
         <CommunityFeatureCollectionDetail
           address="collection-alpha"
-          initialCollectionAssets={collectionAssets}
           initialCommunity={community}
           search={{
             facets: undefined,
@@ -93,7 +116,19 @@ describe('community collection asset deep-link composition', () => {
             owner: undefined,
             query: undefined,
           }}
-        />
+        >
+          <CommunityFeatureCollectionAssets
+            initialCollectionAssets={collectionAssets}
+            search={{
+              facets: undefined,
+              grid: 8,
+              owner: undefined,
+              query: undefined,
+            }}
+            selectedCollection={community.collections[0]!}
+            slug={community.slug}
+          />
+        </CommunityFeatureCollectionDetail>
         <CommunityCollectionAssetDialogContent
           asset={{
             address: 'asset-alpha',
