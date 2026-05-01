@@ -5,13 +5,21 @@ import type {
   AdminAssetGroupListIndexRunsData,
   AdminAssetGroupLookupData,
   AdminAssetGroupUpdateData,
+  AdminCommunityRoleCreateData,
+  AdminOrganizationAddMemberData,
   AdminOrganizationCreateData,
   AdminOrganizationListData,
   AdminOrganizationListOwnerCandidatesData,
   AdminOrganizationUpdateData,
-} from '../generated/types.gen'
+  AdminOrganizationUpsertDiscordConnectionData,
+  AdminUserCreateData,
+  AdminUserLinkDiscordAccountData,
+  AdminUserLinkSolanaWalletData,
+  AdminUserListData,
+  AdminUserUpdateData,
+  CoreStatusData,
+} from '../generated'
 import { requireStoredAuthCredentials } from '../../auth/data-access/auth-token-store'
-import { createClient, type Client as GeneratedClient, type Config as GeneratedClientConfig } from '../generated/client'
 import {
   adminAssetGroupCreate,
   adminAssetGroupDelete,
@@ -21,13 +29,24 @@ import {
   adminAssetGroupListIndexRuns,
   adminAssetGroupLookup,
   adminAssetGroupUpdate,
+  adminCommunityRoleCreate,
+  adminOrganizationAddMember,
   adminOrganizationCreate,
   adminOrganizationDelete,
   adminOrganizationGet,
   adminOrganizationList,
   adminOrganizationListOwnerCandidates,
   adminOrganizationUpdate,
-} from '../generated/sdk.gen'
+  adminOrganizationUpsertDiscordConnection,
+  adminUserCreate,
+  adminUserGet,
+  adminUserLinkDiscordAccount,
+  adminUserLinkSolanaWallet,
+  adminUserList,
+  adminUserUpdate,
+  coreStatus,
+} from '../generated'
+import { type Client as GeneratedClient, type Config as GeneratedClientConfig, createClient } from '../generated/client'
 
 export class AdminApiError extends Error {
   code?: string
@@ -51,10 +70,19 @@ export type AdminAssetGroupLookupInput = AdminAssetGroupLookupData['body']
 export type AdminAssetGroupResolverKind = 'helius-collection-assets' | 'helius-token-accounts' | 'realms-voters'
 export type AdminAssetGroupType = 'collection' | 'mint'
 export type AdminAssetGroupUpdateInput = AdminAssetGroupUpdateData['body']['data']
+export type AdminCommunityRoleCreateInput = AdminCommunityRoleCreateData['body']
+export type AdminOrganizationAddMemberInput = AdminOrganizationAddMemberData['body']
 export type AdminOrganizationCreateInput = AdminOrganizationCreateData['body']
 export type AdminOrganizationListInput = NonNullable<AdminOrganizationListData['body']>
 export type AdminOrganizationListOwnerCandidatesInput = NonNullable<AdminOrganizationListOwnerCandidatesData['body']>
 export type AdminOrganizationUpdateInput = AdminOrganizationUpdateData['body']['data']
+export type AdminOrganizationUpsertDiscordConnectionInput = AdminOrganizationUpsertDiscordConnectionData['body']
+export type AdminUserCreateInput = AdminUserCreateData['body']
+export type AdminUserLinkDiscordAccountInput = AdminUserLinkDiscordAccountData['body']
+export type AdminUserLinkSolanaWalletInput = AdminUserLinkSolanaWalletData['body']
+export type AdminUserListInput = AdminUserListData['body']
+export type AdminUserUpdateInput = AdminUserUpdateData['body']['data']
+export type CoreStatusInput = CoreStatusData['body']
 
 export type AdminAssetGroup = {
   address: string
@@ -81,17 +109,27 @@ export type AdminAssetGroupListResult = {
 export type AdminOrganization = {
   createdAt?: string
   description?: string | null
+  discordConnection?: JsonRecord | null
   discordUrl?: string | null
   githubUrl?: string | null
   id: string
   logo?: string | null
+  members?: AdminOrganizationMember[]
   memberCount?: number
+  metadata?: unknown
   name: string
   owners?: Array<{ name: string; userId: string; username?: string | null }>
   slug: string
   telegramUrl?: string | null
   websiteUrl?: string | null
   xUrl?: string | null
+}
+
+export type AdminOrganizationAddMemberResult = {
+  memberId: string
+  organizationId: string
+  role: AdminOrganizationMemberRole
+  userId: string
 }
 
 export type AdminOrganizationListResult = {
@@ -101,10 +139,80 @@ export type AdminOrganizationListResult = {
   total: number
 }
 
+export type AdminOrganizationMember = {
+  createdAt?: string
+  gatedRoles?: Array<{ id: string; name: string; slug: string }>
+  id: string
+  isManaged?: boolean
+  name: string
+  organizationId: string
+  role: AdminOrganizationMemberRole
+  userId: string
+  username?: string | null
+}
+
+export type AdminOrganizationMemberRole = 'admin' | 'member' | 'owner'
+
 export type AdminOrganizationOwnerCandidate = {
   id: string
   name: string
   username?: string | null
+}
+
+export type AdminCommunityRole = {
+  conditions: Array<{
+    assetGroupAddress: string
+    assetGroupEnabled: boolean
+    assetGroupId: string
+    assetGroupLabel: string
+    assetGroupResolverKind: AdminAssetGroupResolverKind
+    assetGroupType: AdminAssetGroupType
+    id: string
+    maximumAmount: string | null
+    minimumAmount: string
+  }>
+  createdAt?: string
+  enabled: boolean
+  id: string
+  matchMode: 'all' | 'any'
+  name: string
+  organizationId: string
+  slug: string
+  teamId: string
+  teamMemberCount?: number
+  teamName: string
+  updatedAt?: string
+}
+
+export type AdminUser = {
+  assetCount?: number
+  banExpires?: string | null
+  banned?: boolean
+  banReason?: string | null
+  communityCount?: number
+  createdAt?: string
+  developerMode?: boolean
+  displayUsername?: string | null
+  email: string
+  emailVerified?: boolean
+  id: string
+  identityCount?: number
+  image?: string | null
+  name: string
+  private?: boolean
+  role: 'admin' | 'user'
+  updatedAt?: string
+  username?: string | null
+  walletCount?: number
+}
+
+export type AdminUserListResult = {
+  total: number
+  users: AdminUser[]
+}
+
+export type CoreStatusResult = {
+  configured: boolean
 }
 
 export type AdminApiClient = {
@@ -116,6 +224,8 @@ export type AdminApiClient = {
   assetGroupListIndexRuns(input: AdminAssetGroupListIndexRunsInput): Promise<{ indexRuns: JsonRecord[] }>
   assetGroupLookup(input: AdminAssetGroupLookupInput): Promise<JsonRecord>
   assetGroupUpdate(input: { assetGroupId: string; data: AdminAssetGroupUpdateInput }): Promise<AdminAssetGroup>
+  communityRoleCreate(input: AdminCommunityRoleCreateInput): Promise<AdminCommunityRole>
+  organizationAddMember(input: AdminOrganizationAddMemberInput): Promise<AdminOrganizationAddMemberResult>
   organizationCreate(input: AdminOrganizationCreateInput): Promise<AdminOrganization>
   organizationDelete(input: { organizationId: string }): Promise<{ organizationId: string }>
   organizationGet(input: { organizationId: string }): Promise<AdminOrganization | null>
@@ -124,9 +234,40 @@ export type AdminApiClient = {
     input?: AdminOrganizationListOwnerCandidatesInput,
   ): Promise<AdminOrganizationOwnerCandidate[]>
   organizationUpdate(input: { organizationId: string; data: AdminOrganizationUpdateInput }): Promise<AdminOrganization>
+  organizationUpsertDiscordConnection(input: AdminOrganizationUpsertDiscordConnectionInput): Promise<JsonRecord | null>
+  userCreate(input: AdminUserCreateInput): Promise<AdminUser>
+  userGet(input: { userId: string }): Promise<AdminUser | null>
+  userLinkDiscordAccount(input: AdminUserLinkDiscordAccountInput): Promise<AdminUser>
+  userLinkSolanaWallet(input: AdminUserLinkSolanaWalletInput): Promise<AdminUser>
+  userList(input: AdminUserListInput): Promise<AdminUserListResult>
+  userUpdate(input: { data: AdminUserUpdateInput; userId: string }): Promise<AdminUser>
+}
+
+export type PublicApiClient = {
+  coreStatus(input?: CoreStatusInput): Promise<CoreStatusResult>
+}
+
+export type ApiClientOptions = ProfileOptions & {
+  apiClient?: AdminApiClient
+  fetch?: AdminApiFetch
+  signal?: AbortSignal
+  verbose?: boolean
+}
+
+type AdminApiClientCredentials = {
+  apiKey: string
+  apiUrl: string
 }
 
 type AdminApiClientOptions = ProfileOptions & {
+  credentials?: AdminApiClientCredentials
+  fetch?: AdminApiFetch
+  signal?: AbortSignal
+  verbose?: boolean
+}
+
+type PublicApiClientOptions = {
+  apiUrl: string
   fetch?: AdminApiFetch
   signal?: AbortSignal
   verbose?: boolean
@@ -331,13 +472,16 @@ function resolveApiReferenceUrl(apiUrl: string): string {
   return `${normalizedApiUrl}${API_REFERENCE_PATH}`
 }
 
-function getGeneratedClient(input: { apiKey: string; apiUrl: string; fetch?: AdminApiFetch }) {
+function getGeneratedClient(input: { apiKey?: string; apiUrl: string; fetch?: AdminApiFetch }) {
   const config: GeneratedClientConfig = {
     baseUrl: resolveApiReferenceUrl(input.apiUrl),
-    headers: {
-      'x-api-key': input.apiKey,
-    },
     throwOnError: true,
+  }
+
+  if (input.apiKey) {
+    config.headers = {
+      'x-api-key': input.apiKey,
+    }
   }
 
   if (input.fetch) {
@@ -358,7 +502,7 @@ function assertJsonRecord(value: unknown, fallback: string): JsonRecord {
 }
 
 export function createAdminApiClient(options: AdminApiClientOptions = {}): AdminApiClient {
-  const credentials = requireStoredAuthCredentials(options)
+  const credentials = options.credentials ?? requireStoredAuthCredentials(options)
   const client = getGeneratedClient({
     apiKey: credentials.apiKey,
     apiUrl: credentials.apiUrl,
@@ -455,6 +599,18 @@ export function createAdminApiClient(options: AdminApiClientOptions = {}): Admin
         'Unable to update asset group.',
       )
     },
+    communityRoleCreate(input) {
+      return request(
+        (generatedClient) => adminCommunityRoleCreate({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to create community role.',
+      )
+    },
+    organizationAddMember(input) {
+      return request(
+        (generatedClient) => adminOrganizationAddMember({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to add community member.',
+      )
+    },
     organizationCreate(input) {
       return request(
         (generatedClient) => adminOrganizationCreate({ ...requestOptions, body: input, client: generatedClient }),
@@ -492,9 +648,96 @@ export function createAdminApiClient(options: AdminApiClientOptions = {}): Admin
         'Unable to update community.',
       )
     },
+    organizationUpsertDiscordConnection(input) {
+      return request(
+        (generatedClient) =>
+          adminOrganizationUpsertDiscordConnection({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to connect Discord community.',
+      )
+    },
+    userCreate(input) {
+      return request(
+        (generatedClient) => adminUserCreate({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to create user.',
+      )
+    },
+    userGet(input) {
+      return request(
+        (generatedClient) => adminUserGet({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to load user.',
+      )
+    },
+    userLinkDiscordAccount(input) {
+      return request(
+        (generatedClient) => adminUserLinkDiscordAccount({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to link Discord account.',
+      )
+    },
+    userLinkSolanaWallet(input) {
+      return request(
+        (generatedClient) => adminUserLinkSolanaWallet({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to link Solana wallet.',
+      )
+    },
+    userList(input) {
+      return request(
+        (generatedClient) => adminUserList({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to list users.',
+      )
+    },
+    userUpdate(input) {
+      return request(
+        (generatedClient) => adminUserUpdate({ ...requestOptions, body: input, client: generatedClient }),
+        'Unable to update user.',
+      )
+    },
   }
 }
 
-export const adminApiReferenceUrl = {
-  resolve: resolveApiReferenceUrl,
+export function createPublicApiClient(options: PublicApiClientOptions): PublicApiClient {
+  const client = getGeneratedClient({
+    apiUrl: options.apiUrl,
+    fetch: options.fetch,
+  })
+
+  function getRequestClient(onFailure: (details: AdminApiRequestDetails) => void): GeneratedClient {
+    if (!options.verbose) {
+      return client
+    }
+
+    return getGeneratedClient({
+      apiUrl: options.apiUrl,
+      fetch: createVerboseFetch(options.fetch, onFailure),
+    })
+  }
+
+  async function request<T>(callback: (generatedClient: GeneratedClient) => Promise<unknown>, fallback: string) {
+    let responseDetails: AdminApiRequestDetails | undefined
+    const requestClient = getRequestClient((details) => {
+      responseDetails = details
+    })
+
+    try {
+      return (await callback(requestClient)) as T
+    } catch (error) {
+      if (error instanceof AdminApiError) {
+        throw error
+      }
+
+      throw toAdminApiError(error, fallback, responseDetails)
+    }
+  }
+
+  const requestOptions = {
+    signal: options.signal,
+  }
+
+  return {
+    coreStatus() {
+      return request(
+        (generatedClient) => coreStatus({ ...requestOptions, client: generatedClient }),
+        'Unable to load core status.',
+      )
+    },
+  }
 }

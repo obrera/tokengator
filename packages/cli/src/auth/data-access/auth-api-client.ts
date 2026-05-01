@@ -49,6 +49,7 @@ export type AuthSession = {
     email?: string | null
     id: string
     name?: string | null
+    role?: 'admin' | 'user'
     username?: string | null
   }
 }

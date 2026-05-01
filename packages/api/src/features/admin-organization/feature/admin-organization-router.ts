@@ -1,3 +1,4 @@
+import { adminOrganizationFeatureAddMember } from './admin-organization-feature-add-member'
 import { adminOrganizationFeatureCreate } from './admin-organization-feature-create'
 import { adminOrganizationFeatureDelete } from './admin-organization-feature-delete'
 import { adminOrganizationFeatureDeleteDiscordConnection } from './admin-organization-feature-delete-discord-connection'
@@ -17,6 +18,7 @@ import { adminOrganizationFeatureUpsertDiscordAnnouncementConfig } from './admin
 import { adminOrganizationFeatureUpsertDiscordConnection } from './admin-organization-feature-upsert-discord-connection'
 
 export const adminOrganizationRouter = {
+  addMember: adminOrganizationFeatureAddMember,
   create: adminOrganizationFeatureCreate,
   delete: adminOrganizationFeatureDelete,
   deleteDiscordConnection: adminOrganizationFeatureDeleteDiscordConnection,

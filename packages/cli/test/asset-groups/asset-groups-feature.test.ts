@@ -1,15 +1,13 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 
 import type { AdminApiClient, AdminAssetGroup } from '../../src/api/data-access/admin-api-client'
-import {
-  assetGroupsFeatureCreate,
-  assetGroupsFeatureDelete,
-  assetGroupsFeatureIndex,
-  assetGroupsFeatureIndexRuns,
-  assetGroupsFeatureList,
-  assetGroupsFeatureLookup,
-  assetGroupsFeatureUpdate,
-} from '../../src/asset-groups/asset-groups-feature'
+import { assetGroupsFeatureCreate } from '../../src/asset-groups/asset-groups-feature-create'
+import { assetGroupsFeatureDelete } from '../../src/asset-groups/asset-groups-feature-delete'
+import { assetGroupsFeatureIndex } from '../../src/asset-groups/asset-groups-feature-index'
+import { assetGroupsFeatureIndexRuns } from '../../src/asset-groups/asset-groups-feature-index-runs'
+import { assetGroupsFeatureList } from '../../src/asset-groups/asset-groups-feature-list'
+import { assetGroupsFeatureLookup } from '../../src/asset-groups/asset-groups-feature-lookup'
+import { assetGroupsFeatureUpdate } from '../../src/asset-groups/asset-groups-feature-update'
 
 const originalConsoleLog = console.log
 
@@ -52,6 +50,12 @@ function createMockApiClient(overrides: Partial<AdminApiClient> = {}): AdminApiC
       },
     }),
     assetGroupUpdate: async () => createAssetGroup(),
+    communityRoleCreate: async () => {
+      throw new Error('not implemented')
+    },
+    organizationAddMember: async () => {
+      throw new Error('not implemented')
+    },
     organizationCreate: async () => {
       throw new Error('not implemented')
     },
@@ -68,6 +72,27 @@ function createMockApiClient(overrides: Partial<AdminApiClient> = {}): AdminApiC
       throw new Error('not implemented')
     },
     organizationUpdate: async () => {
+      throw new Error('not implemented')
+    },
+    organizationUpsertDiscordConnection: async () => {
+      throw new Error('not implemented')
+    },
+    userCreate: async () => {
+      throw new Error('not implemented')
+    },
+    userGet: async () => {
+      throw new Error('not implemented')
+    },
+    userLinkDiscordAccount: async () => {
+      throw new Error('not implemented')
+    },
+    userLinkSolanaWallet: async () => {
+      throw new Error('not implemented')
+    },
+    userList: async () => {
+      throw new Error('not implemented')
+    },
+    userUpdate: async () => {
       throw new Error('not implemented')
     },
     ...overrides,
@@ -202,6 +227,20 @@ describe('asset-groups features', () => {
     await expect(assetGroupsFeatureUpdate('asset-group-id', { apiClient, type: 'mint' })).rejects.toThrow(
       'Use --resolver-kind when changing to a type that is incompatible with the current resolver kind.',
     )
+  })
+
+  test('rejects resolver kind that is incompatible with the next type', async () => {
+    const apiClient = createMockApiClient({
+      assetGroupGet: async () => createAssetGroup(),
+    })
+
+    await expect(
+      assetGroupsFeatureUpdate('asset-group-id', {
+        apiClient,
+        resolverKind: 'helius-collection-assets',
+        type: 'mint',
+      }),
+    ).rejects.toThrow('Use a resolver kind that is compatible with the selected type.')
   })
 
   test('prints JSON output for scripts', async () => {

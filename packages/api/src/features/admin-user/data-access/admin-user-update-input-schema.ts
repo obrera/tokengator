@@ -6,6 +6,7 @@ const adminUserUpdateDataSchema = z.object({
   banReason: z.string().nullable().optional(),
   developerMode: z.boolean().optional(),
   email: z.string().email().optional(),
+  emailVerified: z.boolean().optional(),
   image: z.string().nullable().optional(),
   name: z.string().min(1).optional(),
   private: z.boolean().optional(),

@@ -1,1 +1,5 @@
-export type BodyInit = NonNullable<RequestInit['body']>
+declare global {
+  type BodyInit = NonNullable<RequestInit['body']>
+}
+
+export {}

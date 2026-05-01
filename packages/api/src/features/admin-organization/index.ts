@@ -8,6 +8,7 @@ export type {
   AdminOrganizationOwnerCandidateEntity,
   AdminOrganizationOwnerEntity,
 } from './data-access/admin-organization.entity'
+export type { AdminOrganizationAddMemberInput } from './data-access/admin-organization-add-member-input'
 export type { AdminOrganizationCreateInput } from './data-access/admin-organization-create-input'
 export type { AdminOrganizationDeleteDiscordConnectionInput } from './data-access/admin-organization-delete-discord-connection-input'
 export type { AdminOrganizationDeleteInput } from './data-access/admin-organization-delete-input'

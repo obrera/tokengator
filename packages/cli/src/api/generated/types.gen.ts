@@ -46,6 +46,7 @@ export type AdminAssetGroupCreateData = {
     label: string
     resolverKind?: 'helius-collection-assets' | 'helius-token-accounts' | 'realms-voters'
     symbol?: string | null
+    symbolMagicEden?: string | null
     type: 'collection' | 'mint'
   }
   path?: never
@@ -170,6 +171,7 @@ export type AdminAssetGroupUpdateData = {
       label: string
       resolverKind?: 'helius-collection-assets' | 'helius-token-accounts' | 'realms-voters'
       symbol?: string | null
+      symbolMagicEden?: string | null
       type: 'collection' | 'mint'
     }
   }
@@ -243,6 +245,33 @@ export type AdminCommunityRoleCreateResponses = {
    */
   200: unknown
 }
+
+export type AdminCommunityRoleCreateDiscordRoleMappingData = {
+  body: {
+    communityRoleId: string
+  }
+  path?: never
+  query?: never
+  url: '/adminCommunityRole/createDiscordRoleMapping'
+}
+
+export type AdminCommunityRoleCreateDiscordRoleMappingResponses = {
+  /**
+   * OK
+   */
+  200: {
+    created: boolean
+    discordRoleId: string
+    discordRoleName: string
+    mapping: {
+      checks: Array<string>
+      status: 'needs_attention' | 'not_mapped' | 'ready'
+    }
+  }
+}
+
+export type AdminCommunityRoleCreateDiscordRoleMappingResponse =
+  AdminCommunityRoleCreateDiscordRoleMappingResponses[keyof AdminCommunityRoleCreateDiscordRoleMappingResponses]
 
 export type AdminCommunityRoleDeleteData = {
   body: {
@@ -402,6 +431,24 @@ export type AdminCommunityRoleUpdateResponses = {
   200: unknown
 }
 
+export type AdminOrganizationAddMemberData = {
+  body: {
+    organizationId: string
+    role: 'admin' | 'member' | 'owner'
+    userId: string
+  }
+  path?: never
+  query?: never
+  url: '/adminOrganization/addMember'
+}
+
+export type AdminOrganizationAddMemberResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
 export type AdminOrganizationCreateData = {
   body: {
     logo?: string
@@ -502,6 +549,34 @@ export type AdminOrganizationListResponses = {
    */
   200: unknown
 }
+
+export type AdminOrganizationListDiscordGuildsData = {
+  body: {
+    organizationId: string
+  }
+  path?: never
+  query?: never
+  url: '/adminOrganization/listDiscordGuilds'
+}
+
+export type AdminOrganizationListDiscordGuildsResponses = {
+  /**
+   * OK
+   */
+  200: Array<{
+    assignedCommunity: {
+      id: string
+      name: string
+      slug: string
+    } | null
+    disabled: boolean
+    id: string
+    name: string
+  }>
+}
+
+export type AdminOrganizationListDiscordGuildsResponse =
+  AdminOrganizationListDiscordGuildsResponses[keyof AdminOrganizationListDiscordGuildsResponses]
 
 export type AdminOrganizationListOwnerCandidatesData = {
   body?: {
@@ -612,6 +687,7 @@ export type AdminOrganizationUpdateData = {
       discordUrl?: string
       githubUrl?: string
       logo?: string
+      metadata?: unknown
       name: string
       slug: string
       telegramUrl?: string
@@ -684,6 +760,27 @@ export type AdminOrganizationUpsertDiscordConnectionResponses = {
   200: unknown
 }
 
+export type AdminUserCreateData = {
+  body: {
+    email: string
+    emailVerified?: boolean
+    image?: string | null
+    name: string
+    role?: 'admin' | 'user'
+    username?: string | null
+  }
+  path?: never
+  query?: never
+  url: '/adminUser/create'
+}
+
+export type AdminUserCreateResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
 export type AdminUserDeleteSolanaWalletData = {
   body: {
     solanaWalletId: string
@@ -711,6 +808,42 @@ export type AdminUserGetData = {
 }
 
 export type AdminUserGetResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
+export type AdminUserLinkDiscordAccountData = {
+  body: {
+    accountId: string
+    userId: string
+  }
+  path?: never
+  query?: never
+  url: '/adminUser/linkDiscordAccount'
+}
+
+export type AdminUserLinkDiscordAccountResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
+export type AdminUserLinkSolanaWalletData = {
+  body: {
+    address: string
+    isPrimary?: boolean
+    name?: string | null
+    userId: string
+  }
+  path?: never
+  query?: never
+  url: '/adminUser/linkSolanaWallet'
+}
+
+export type AdminUserLinkSolanaWalletResponses = {
   /**
    * OK
    */
@@ -825,6 +958,7 @@ export type AdminUserUpdateData = {
       banReason?: string | null
       developerMode?: boolean
       email?: string
+      emailVerified?: boolean
       image?: string | null
       name?: string
       private?: boolean
@@ -915,6 +1049,23 @@ export type CommunityGetCollectionAssetResponses = {
   200: unknown
 }
 
+export type CommunityGetCollectionInsightsData = {
+  body: {
+    address: string
+    slug: string
+  }
+  path?: never
+  query?: never
+  url: '/community/getCollectionInsights'
+}
+
+export type CommunityGetCollectionInsightsResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
 export type CommunityListData = {
   body?: never
   path?: never
@@ -923,6 +1074,24 @@ export type CommunityListData = {
 }
 
 export type CommunityListResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
+export type CommunityListAssetMarketplaceListingsData = {
+  body: {
+    assetGroupId: string
+    limit?: number
+    slug: string
+  }
+  path?: never
+  query?: never
+  url: '/community/listAssetMarketplaceListings'
+}
+
+export type CommunityListAssetMarketplaceListingsResponses = {
   /**
    * OK
    */
@@ -951,6 +1120,25 @@ export type CommunityListCollectionAssetsResponses = {
   200: unknown
 }
 
+export type CommunityListCollectionLeaderboardData = {
+  body: {
+    address: string
+    holderFilter?: 'known' | 'unknown'
+    limit?: number
+    slug: string
+  }
+  path?: never
+  query?: never
+  url: '/community/listCollectionLeaderboard'
+}
+
+export type CommunityListCollectionLeaderboardResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
 export type CommunityListCollectionOwnerCandidatesData = {
   body?: {
     limit?: number
@@ -962,6 +1150,54 @@ export type CommunityListCollectionOwnerCandidatesData = {
 }
 
 export type CommunityListCollectionOwnerCandidatesResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
+export type CommunityPrepareAssetMarketplaceBuyData = {
+  body: {
+    assetGroupId: string
+    buyer: string
+    listing: {
+      assetAddress: string
+      auctionHouseAddress: string | null
+      id: string
+      imageUrl: string | null
+      name: string | null
+      priceSol: number
+      seller: string
+      sellerExpiry: number
+      tokenAta: string
+      verification: string
+    }
+    slug: string
+  }
+  path?: never
+  query?: never
+  url: '/community/prepareAssetMarketplaceBuy'
+}
+
+export type CommunityPrepareAssetMarketplaceBuyResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
+export type CommunityRefreshAssetMarketplaceAccessData = {
+  body: {
+    assetGroupId: string
+    signature: string
+    slug: string
+  }
+  path?: never
+  query?: never
+  url: '/community/refreshAssetMarketplaceAccess'
+}
+
+export type CommunityRefreshAssetMarketplaceAccessResponses = {
   /**
    * OK
    */
@@ -990,6 +1226,20 @@ export type CoreHealthCheckData = {
 }
 
 export type CoreHealthCheckResponses = {
+  /**
+   * OK
+   */
+  200: unknown
+}
+
+export type CoreStatusData = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/core/status'
+}
+
+export type CoreStatusResponses = {
   /**
    * OK
    */

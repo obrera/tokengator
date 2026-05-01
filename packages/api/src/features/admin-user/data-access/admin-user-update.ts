@@ -73,6 +73,7 @@ export async function adminUserUpdate(input: {
 }) {
   const existingUser = await adminUserRecordGet(input.userId)
   const nextDeveloperMode = input.data.developerMode
+  const nextEmailVerified = input.data.emailVerified
   const nextImage = input.data.image === undefined ? undefined : normalizeOptionalString(input.data.image)
   const nextPrivate = input.data.private
 
@@ -94,12 +95,18 @@ export async function adminUserUpdate(input: {
     })
   }
 
-  if (nextDeveloperMode !== undefined || nextImage !== undefined || nextPrivate !== undefined) {
+  if (
+    nextDeveloperMode !== undefined ||
+    nextEmailVerified !== undefined ||
+    nextImage !== undefined ||
+    nextPrivate !== undefined
+  ) {
     // Better Auth's admin update endpoint does not persist image and does not manage app-specific flags.
     await db
       .update(user)
       .set({
         developerMode: nextDeveloperMode,
+        emailVerified: nextEmailVerified,
         image: nextImage,
         private: nextPrivate,
       })

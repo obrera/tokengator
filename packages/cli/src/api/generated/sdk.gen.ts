@@ -28,6 +28,8 @@ import type {
   AdminCommunityRoleApplySyncResponses,
   AdminCommunityRoleCreateData,
   AdminCommunityRoleCreateResponses,
+  AdminCommunityRoleCreateDiscordRoleMappingData,
+  AdminCommunityRoleCreateDiscordRoleMappingResponses,
   AdminCommunityRoleDeleteData,
   AdminCommunityRoleDeleteResponses,
   AdminCommunityRoleGetSyncStatusData,
@@ -46,6 +48,8 @@ import type {
   AdminCommunityRoleSetDiscordRoleMappingResponses,
   AdminCommunityRoleUpdateData,
   AdminCommunityRoleUpdateResponses,
+  AdminOrganizationAddMemberData,
+  AdminOrganizationAddMemberResponses,
   AdminOrganizationCreateData,
   AdminOrganizationCreateResponses,
   AdminOrganizationDeleteData,
@@ -58,6 +62,8 @@ import type {
   AdminOrganizationGetDiscordAnnouncementCatalogResponses,
   AdminOrganizationListData,
   AdminOrganizationListResponses,
+  AdminOrganizationListDiscordGuildsData,
+  AdminOrganizationListDiscordGuildsResponses,
   AdminOrganizationListOwnerCandidatesData,
   AdminOrganizationListOwnerCandidatesResponses,
   AdminOrganizationRefreshDiscordConnectionData,
@@ -78,10 +84,16 @@ import type {
   AdminOrganizationUpsertDiscordAnnouncementConfigResponses,
   AdminOrganizationUpsertDiscordConnectionData,
   AdminOrganizationUpsertDiscordConnectionResponses,
+  AdminUserCreateData,
+  AdminUserCreateResponses,
   AdminUserDeleteSolanaWalletData,
   AdminUserDeleteSolanaWalletResponses,
   AdminUserGetData,
   AdminUserGetResponses,
+  AdminUserLinkDiscordAccountData,
+  AdminUserLinkDiscordAccountResponses,
+  AdminUserLinkSolanaWalletData,
+  AdminUserLinkSolanaWalletResponses,
   AdminUserListData,
   AdminUserListResponses,
   AdminUserListAssetsData,
@@ -104,16 +116,28 @@ import type {
   CommunityGetBySlugResponses,
   CommunityGetCollectionAssetData,
   CommunityGetCollectionAssetResponses,
+  CommunityGetCollectionInsightsData,
+  CommunityGetCollectionInsightsResponses,
   CommunityListData,
   CommunityListResponses,
+  CommunityListAssetMarketplaceListingsData,
+  CommunityListAssetMarketplaceListingsResponses,
   CommunityListCollectionAssetsData,
   CommunityListCollectionAssetsResponses,
+  CommunityListCollectionLeaderboardData,
+  CommunityListCollectionLeaderboardResponses,
   CommunityListCollectionOwnerCandidatesData,
   CommunityListCollectionOwnerCandidatesResponses,
+  CommunityPrepareAssetMarketplaceBuyData,
+  CommunityPrepareAssetMarketplaceBuyResponses,
+  CommunityRefreshAssetMarketplaceAccessData,
+  CommunityRefreshAssetMarketplaceAccessResponses,
   CoreAppConfigData,
   CoreAppConfigResponses,
   CoreHealthCheckData,
   CoreHealthCheckResponses,
+  CoreStatusData,
+  CoreStatusResponses,
   DevEchoData,
   DevEchoResponses,
   DevPubkeyLinkImportApplyData,
@@ -357,6 +381,25 @@ export const adminCommunityRoleCreate = <ThrowOnError extends boolean = true>(
   })
 }
 
+export const adminCommunityRoleCreateDiscordRoleMapping = <ThrowOnError extends boolean = true>(
+  options: Options<AdminCommunityRoleCreateDiscordRoleMappingData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<
+    AdminCommunityRoleCreateDiscordRoleMappingResponses,
+    unknown,
+    ThrowOnError,
+    'data'
+  >({
+    responseStyle: 'data',
+    url: '/adminCommunityRole/createDiscordRoleMapping',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
 export const adminCommunityRoleDelete = <ThrowOnError extends boolean = true>(
   options: Options<AdminCommunityRoleDeleteData, ThrowOnError>,
 ) => {
@@ -503,6 +546,20 @@ export const adminCommunityRoleUpdate = <ThrowOnError extends boolean = true>(
   })
 }
 
+export const adminOrganizationAddMember = <ThrowOnError extends boolean = true>(
+  options: Options<AdminOrganizationAddMemberData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<AdminOrganizationAddMemberResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
+    url: '/adminOrganization/addMember',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
 export const adminOrganizationCreate = <ThrowOnError extends boolean = true>(
   options: Options<AdminOrganizationCreateData, ThrowOnError>,
 ) => {
@@ -593,6 +650,25 @@ export const adminOrganizationList = <ThrowOnError extends boolean = true>(
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
+    },
+  })
+}
+
+export const adminOrganizationListDiscordGuilds = <ThrowOnError extends boolean = true>(
+  options: Options<AdminOrganizationListDiscordGuildsData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<
+    AdminOrganizationListDiscordGuildsResponses,
+    unknown,
+    ThrowOnError,
+    'data'
+  >({
+    responseStyle: 'data',
+    url: '/adminOrganization/listDiscordGuilds',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
     },
   })
 }
@@ -777,6 +853,20 @@ export const adminOrganizationUpsertDiscordConnection = <ThrowOnError extends bo
   })
 }
 
+export const adminUserCreate = <ThrowOnError extends boolean = true>(
+  options: Options<AdminUserCreateData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<AdminUserCreateResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
+    url: '/adminUser/create',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
 export const adminUserDeleteSolanaWallet = <ThrowOnError extends boolean = true>(
   options: Options<AdminUserDeleteSolanaWalletData, ThrowOnError>,
 ) => {
@@ -795,6 +885,34 @@ export const adminUserGet = <ThrowOnError extends boolean = true>(options: Optio
   return (options.client ?? _heyApiClient).post<AdminUserGetResponses, unknown, ThrowOnError, 'data'>({
     responseStyle: 'data',
     url: '/adminUser/get',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
+export const adminUserLinkDiscordAccount = <ThrowOnError extends boolean = true>(
+  options: Options<AdminUserLinkDiscordAccountData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<AdminUserLinkDiscordAccountResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
+    url: '/adminUser/linkDiscordAccount',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
+export const adminUserLinkSolanaWallet = <ThrowOnError extends boolean = true>(
+  options: Options<AdminUserLinkSolanaWalletData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<AdminUserLinkSolanaWalletResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
+    url: '/adminUser/linkSolanaWallet',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -972,6 +1090,22 @@ export const communityGetCollectionAsset = <ThrowOnError extends boolean = true>
   })
 }
 
+export const communityGetCollectionInsights = <ThrowOnError extends boolean = true>(
+  options: Options<CommunityGetCollectionInsightsData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<CommunityGetCollectionInsightsResponses, unknown, ThrowOnError, 'data'>(
+    {
+      responseStyle: 'data',
+      url: '/community/getCollectionInsights',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    },
+  )
+}
+
 export const communityList = <ThrowOnError extends boolean = true>(
   options?: Options<CommunityListData, ThrowOnError>,
 ) => {
@@ -982,12 +1116,50 @@ export const communityList = <ThrowOnError extends boolean = true>(
   })
 }
 
+export const communityListAssetMarketplaceListings = <ThrowOnError extends boolean = true>(
+  options: Options<CommunityListAssetMarketplaceListingsData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<
+    CommunityListAssetMarketplaceListingsResponses,
+    unknown,
+    ThrowOnError,
+    'data'
+  >({
+    responseStyle: 'data',
+    url: '/community/listAssetMarketplaceListings',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
 export const communityListCollectionAssets = <ThrowOnError extends boolean = true>(
   options: Options<CommunityListCollectionAssetsData, ThrowOnError>,
 ) => {
   return (options.client ?? _heyApiClient).post<CommunityListCollectionAssetsResponses, unknown, ThrowOnError, 'data'>({
     responseStyle: 'data',
     url: '/community/listCollectionAssets',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
+export const communityListCollectionLeaderboard = <ThrowOnError extends boolean = true>(
+  options: Options<CommunityListCollectionLeaderboardData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<
+    CommunityListCollectionLeaderboardResponses,
+    unknown,
+    ThrowOnError,
+    'data'
+  >({
+    responseStyle: 'data',
+    url: '/community/listCollectionLeaderboard',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -1015,6 +1187,44 @@ export const communityListCollectionOwnerCandidates = <ThrowOnError extends bool
   })
 }
 
+export const communityPrepareAssetMarketplaceBuy = <ThrowOnError extends boolean = true>(
+  options: Options<CommunityPrepareAssetMarketplaceBuyData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<
+    CommunityPrepareAssetMarketplaceBuyResponses,
+    unknown,
+    ThrowOnError,
+    'data'
+  >({
+    responseStyle: 'data',
+    url: '/community/prepareAssetMarketplaceBuy',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
+export const communityRefreshAssetMarketplaceAccess = <ThrowOnError extends boolean = true>(
+  options: Options<CommunityRefreshAssetMarketplaceAccessData, ThrowOnError>,
+) => {
+  return (options.client ?? _heyApiClient).post<
+    CommunityRefreshAssetMarketplaceAccessResponses,
+    unknown,
+    ThrowOnError,
+    'data'
+  >({
+    responseStyle: 'data',
+    url: '/community/refreshAssetMarketplaceAccess',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
 export const coreAppConfig = <ThrowOnError extends boolean = true>(
   options?: Options<CoreAppConfigData, ThrowOnError>,
 ) => {
@@ -1031,6 +1241,14 @@ export const coreHealthCheck = <ThrowOnError extends boolean = true>(
   return (options?.client ?? _heyApiClient).post<CoreHealthCheckResponses, unknown, ThrowOnError, 'data'>({
     responseStyle: 'data',
     url: '/core/healthCheck',
+    ...options,
+  })
+}
+
+export const coreStatus = <ThrowOnError extends boolean = true>(options?: Options<CoreStatusData, ThrowOnError>) => {
+  return (options?.client ?? _heyApiClient).post<CoreStatusResponses, unknown, ThrowOnError, 'data'>({
+    responseStyle: 'data',
+    url: '/core/status',
     ...options,
   })
 }

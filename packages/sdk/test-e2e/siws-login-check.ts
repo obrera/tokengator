@@ -1,31 +1,60 @@
 import { createKeyPairSignerFromBytes, getBase58Decoder, signBytes } from '@solana/kit'
-import { createSIWSInput, siwsClient } from 'better-auth-solana/client'
+import { createSIWSMessage, siwsClient } from 'better-auth-solana/client'
 import { createAuthClient } from 'better-auth/client'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { alice, bob, type TestUser } from '@tokengator/db/dev-seed-users'
 
 import { createOrpcClient, type OrpcClientFetch } from '../src/index'
 
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..', '..', 'db')
+const CLI_PACKAGE_DIR = resolve(import.meta.dir, '..', '..', 'cli')
+const REPO_ROOT_DIR = resolve(import.meta.dir, '..', '..', '..')
+const DEFAULT_SEED_PATH = resolve(REPO_ROOT_DIR, 'scripts', 'default-dev-seed.json')
 const SIWS_STATEMENT = 'Sign in to Tokengator'
 
+type SeedSolanaFixture = {
+  publicKey: string
+  secret: readonly number[]
+}
+
+type SeedUserFixture = {
+  email: string
+  solana?: SeedSolanaFixture
+  username: string
+}
+
+type SeedDefinitionFixture = {
+  users: SeedUserFixture[]
+}
+
+type SeededSiwsUser = SeedUserFixture & {
+  solana: SeedSolanaFixture
+}
+
+function loadDefaultSeedDefinition(): SeedDefinitionFixture {
+  return JSON.parse(readFileSync(DEFAULT_SEED_PATH, 'utf8')) as SeedDefinitionFixture
+}
+
+function getSeededSiwsUser(username: string): SeededSiwsUser {
+  const seedUser = loadDefaultSeedDefinition().users.find((user) => user.username === username)
+
+  if (!seedUser?.solana) {
+    throw new Error(`Default seed user "${username}" does not have a Solana fixture.`)
+  }
+
+  return {
+    email: seedUser.email,
+    solana: seedUser.solana,
+    username: seedUser.username,
+  }
+}
+
 const seededUsers = {
-  alice: {
-    email: 'alice@example.com',
-    fixture: alice,
-    role: 'admin',
-    username: 'alice',
-  },
-  bob: {
-    email: 'bob@example.com',
-    fixture: bob,
-    role: 'user',
-    username: 'bob',
-  },
+  alice: getSeededSiwsUser('alice'),
+  bob: getSeededSiwsUser('bob'),
 } as const
 
 type DatabaseClient = (typeof import('@tokengator/db'))['db']
@@ -101,21 +130,6 @@ function decodeOutput(buffer: Uint8Array | undefined) {
   return buffer ? Buffer.from(buffer).toString('utf8').trim() : ''
 }
 
-function formatSiwsMessage(input: ReturnType<typeof createSIWSInput>) {
-  return [
-    `${input.domain} wants you to sign in with your Solana account:`,
-    input.address,
-    '',
-    input.statement,
-    '',
-    `URI: ${input.uri}`,
-    `Version: ${input.version}`,
-    `Nonce: ${input.nonce}`,
-    `Issued At: ${input.issuedAt}`,
-    `Expiration Time: ${input.expirationTime}`,
-  ].join('\n')
-}
-
 async function getAvailablePort() {
   return await new Promise<number>((resolvePromise, rejectPromise) => {
     const portServer = createServer()
@@ -156,7 +170,7 @@ async function getUserCount() {
 
 async function signInWithSiws(
   authClient: ReturnType<typeof createSiwsSessionClients>['authClient'],
-  fixture: TestUser,
+  fixture: SeededSiwsUser,
 ) {
   const { data: challenge, error: challengeError } = await authClient.siws.nonce({
     walletAddress: fixture.solana.publicKey,
@@ -166,12 +180,11 @@ async function signInWithSiws(
     throw new Error(challengeError?.message ?? 'Failed to request SIWS challenge.')
   }
 
-  const input = createSIWSInput({
+  const message = createSIWSMessage({
     address: fixture.solana.publicKey,
     challenge,
     statement: SIWS_STATEMENT,
   })
-  const message = formatSiwsMessage(input)
   const signer = await createKeyPairSignerFromBytes(new Uint8Array(fixture.solana.secret))
 
   if (signer.address !== fixture.solana.publicKey) {
@@ -214,6 +227,31 @@ function syncDatabase(databaseUrl: string) {
   }
 }
 
+async function readSubprocessOutput(stream: ReadableStream<Uint8Array<ArrayBufferLike>> | null) {
+  return stream ? (await new Response(stream).text()).trim() : ''
+}
+
+async function runCliSeed(baseUrl: string) {
+  const subprocess = Bun.spawn({
+    cmd: ['bun', 'run', './src/cli.ts', 'seed', 'apply', DEFAULT_SEED_PATH, '--api-url', baseUrl],
+    cwd: CLI_PACKAGE_DIR,
+    env: {
+      ...process.env,
+    },
+    stderr: 'pipe',
+    stdout: 'pipe',
+  })
+  const [stdout, stderr, exitCode] = await Promise.all([
+    readSubprocessOutput(subprocess.stdout),
+    readSubprocessOutput(subprocess.stderr),
+    subprocess.exited,
+  ])
+
+  if (exitCode !== 0) {
+    throw new Error(`Failed to seed the SIWS e2e database through the CLI.\n${stdout}\n${stderr}`)
+  }
+}
+
 async function runSiwsLoginCheck(userKey: SeededUserKey) {
   const seededUser = seededUsers[userKey]
   const port = await getAvailablePort()
@@ -233,7 +271,7 @@ async function runSiwsLoginCheck(userKey: SeededUserKey) {
   process.env.HELIUS_API_KEY = 'helius-api-key'
   process.env.HELIUS_CLUSTER = 'devnet'
   process.env.NODE_ENV = 'test'
-  process.env.SOLANA_ADMIN_ADDRESSES = ''
+  process.env.SOLANA_ADMIN_ADDRESSES = seededUsers.alice.solana.publicKey
   process.env.SOLANA_CLUSTER = 'devnet'
   process.env.SOLANA_ENDPOINT_PUBLIC = 'https://api.devnet.solana.com'
 
@@ -244,13 +282,6 @@ async function runSiwsLoginCheck(userKey: SeededUserKey) {
   try {
     ;({ db: database } = await import('@tokengator/db'))
 
-    const { seedDatabase } = await import('@tokengator/db/seed')
-    const seedResult = await seedDatabase()
-
-    if (seedResult.skipped) {
-      throw new Error('Expected the SIWS e2e database seed to populate an empty test database.')
-    }
-
     const { createApiApp } = await import('@tokengator/api/app')
     const app = createApiApp()
 
@@ -260,6 +291,8 @@ async function runSiwsLoginCheck(userKey: SeededUserKey) {
       port,
     })
 
+    await runCliSeed(baseUrl)
+
     const session = createSiwsSessionClients(baseUrl)
     const seededAccount = await getSeededUserByEmail(seededUser.email)
 
@@ -267,7 +300,7 @@ async function runSiwsLoginCheck(userKey: SeededUserKey) {
       throw new Error(`Missing seeded user ${seededUser.email}.`)
     }
 
-    const verificationResult = await signInWithSiws(session.authClient, seededUser.fixture)
+    const verificationResult = await signInWithSiws(session.authClient, seededUser)
     const sessionResult = await session.authClient.getSession()
     const wallets = await session.client.profile.listSolanaWallets()
 

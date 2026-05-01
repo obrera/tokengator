@@ -25,4 +25,16 @@ describe('communities cli commands', () => {
     expect(output).toContain('--profile')
     expect(output).toContain('--verbose')
   })
+
+  for (const subcommand of [
+    ['discord', 'connect'],
+    ['members', 'add'],
+  ] as const) {
+    test(`registers communities ${subcommand.join(' ')}`, () => {
+      const result = runCli(['communities', ...subcommand, '--help'], createTempConfigHome())
+
+      expect(result.exitCode).toBe(0)
+      expect(decodeOutput(result.stdout)).toContain(`tokengator communities ${subcommand.join(' ')}`)
+    })
+  }
 })

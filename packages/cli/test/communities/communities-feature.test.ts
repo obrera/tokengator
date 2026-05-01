@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 
 import type { AdminApiClient, AdminOrganization } from '../../src/api/data-access/admin-api-client'
-import {
-  communitiesFeatureCreate,
-  communitiesFeatureDelete,
-  communitiesFeatureList,
-  communitiesFeatureOwnerCandidates,
-  communitiesFeatureUpdate,
-} from '../../src/communities/communities-feature'
+import { communitiesFeatureCreate } from '../../src/communities/communities-feature-create'
+import { communitiesFeatureDelete } from '../../src/communities/communities-feature-delete'
+import { communitiesFeatureList } from '../../src/communities/communities-feature-list'
+import { communitiesFeatureOwnerCandidates } from '../../src/communities/communities-feature-owner-candidates'
+import { communitiesFeatureUpdate } from '../../src/communities/communities-feature-update'
 
 const originalConsoleLog = console.log
 
@@ -61,6 +59,12 @@ function createMockApiClient(overrides: Partial<AdminApiClient> = {}): AdminApiC
     assetGroupUpdate: async () => {
       throw new Error('not implemented')
     },
+    communityRoleCreate: async () => {
+      throw new Error('not implemented')
+    },
+    organizationAddMember: async () => {
+      throw new Error('not implemented')
+    },
     organizationCreate: async () => createCommunity(),
     organizationDelete: async (input) => input,
     organizationGet: async () => createCommunity(),
@@ -73,6 +77,27 @@ function createMockApiClient(overrides: Partial<AdminApiClient> = {}): AdminApiC
       },
     ],
     organizationUpdate: async () => createCommunity(),
+    organizationUpsertDiscordConnection: async () => {
+      throw new Error('not implemented')
+    },
+    userCreate: async () => {
+      throw new Error('not implemented')
+    },
+    userGet: async () => {
+      throw new Error('not implemented')
+    },
+    userLinkDiscordAccount: async () => {
+      throw new Error('not implemented')
+    },
+    userLinkSolanaWallet: async () => {
+      throw new Error('not implemented')
+    },
+    userList: async () => {
+      throw new Error('not implemented')
+    },
+    userUpdate: async () => {
+      throw new Error('not implemented')
+    },
     ...overrides,
   }
 }

@@ -41,15 +41,15 @@ bun run setup
 
 This project uses SQLite with Drizzle ORM.
 
-1. Start the local SQLite database (optional):
+1. Start the local SQLite database:
 
 ```bash
 bun run db:local
 ```
 
-2. Update your `.env` file in the `apps/api` directory with the appropriate connection details if needed.
-
-For the full local TokenGator flow, fill in the Discord and Helius values in addition to the local database defaults.
+2. Edit `apps/api/.env` only for the external services you want to exercise, such as Discord OAuth,
+   Discord bot startup, or Helius indexing. The generated defaults are enough to start the local
+   database, API, and web app.
 
 3. Apply the schema to your database:
 
@@ -57,45 +57,43 @@ For the full local TokenGator flow, fill in the Discord and Helius values in add
 bun run db:push
 ```
 
-4. Seed the local development dataset:
-
-```bash
-bun run db:seed
-```
-
-This seeds local users, Solana sign-in fixtures, and development organizations. The command prints the seeded usernames and organization summaries when it completes.
-
-Then, start the development apps in separate terminals:
+4. Start the API in one terminal:
 
 ```bash
 bun run dev:api
+```
+
+5. Start the web app in a separate terminal:
+
+```bash
 bun run dev:web
 ```
 
 Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
 The API is running at [http://localhost:3000](http://localhost:3000).
 
-## `dev:local`
+## Optional Seed Data
 
-Use the split `dev:api` and `dev:web` flow above for regular development.
-To quickly start the full local stack and verify the setup is coherent, run:
+The app can run with an empty local database. To add the default local users and organizations,
+first set the CLI to talk to your local API:
 
 ```bash
-bun run dev:local
+bun cli config init
 ```
 
-This starts the local database, waits for it to be ready, runs `db:push`, runs `db:seed`, and then opens the database, API, and web processes in a `tmux` session.
+Choose `local` (`http://localhost:3000`) when prompted. This stores the API URL used by later
+`bun cli ...` commands.
 
-This helps when you want a quick end-to-end local setup check without manually coordinating multiple terminals and startup order.
+Then, with `bun run dev:api` still running, apply the seed:
 
-Useful `tmux` shortcuts with the default setup:
+```bash
+bun run db:seed
+```
 
-- `Ctrl+b`, then arrow keys: switch panes
-- `Ctrl+b`, then `d`: detach and leave everything running
-- `Ctrl+c` inside a pane: stop the current process, then rerun the command in that pane
-- `exit`: close the current pane
-- `tmux attach -t tokengator-dev`: reattach to the session
-- `tmux kill-session -t tokengator-dev`: stop the whole session
+This reads `scripts/default-dev-seed.json`, signs in as Alice's fixture wallet, and creates the
+local users and organizations through the API. The checked-in `apps/api/.env.example` already
+includes Alice's wallet in `SOLANA_ADMIN_ADDRESSES`, so the `.env` created by `bun run setup`
+works with the default seed.
 
 ## Docker
 
@@ -204,11 +202,10 @@ tokengator/
 - `bun run db:migrate`: Run database migrations
 - `bun run db:push`: Push schema changes to database
 - `bun run db:reset`: Remove the local SQLite database files
-- `bun run db:seed`: Seed the local development dataset
+- `bun run db:seed`: Seed local development data through the local API
 - `bun run db:studio`: Open database studio UI
 - `bun run dev`: Start all applications in development mode
 - `bun run dev:api`: Start only the API
-- `bun run dev:local`: Start the local database, apply schema/seed, and open API/web in `tmux`
 - `bun run dev:web`: Start only the web application
 - `bun run lint`: Run Oxlint and Oxfmt in check mode
 - `bun run lint:fix`: Run Oxlint and Oxfmt with auto-fixing

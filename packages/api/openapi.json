@@ -1192,6 +1192,53 @@
         }
       }
     },
+    "/adminOrganization/addMember": {
+      "post": {
+        "operationId": "adminOrganization.addMember",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "organizationId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "role": {
+                    "enum": ["admin", "member", "owner"],
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["organizationId", "role", "userId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/adminOrganization/create": {
       "post": {
         "operationId": "adminOrganization.create",
@@ -1799,6 +1846,7 @@
                       "logo": {
                         "type": "string"
                       },
+                      "metadata": {},
                       "name": {
                         "type": "string",
                         "minLength": 1
@@ -1981,6 +2029,76 @@
         }
       }
     },
+    "/adminUser/create": {
+      "post": {
+        "operationId": "adminUser.create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "emailVerified": {
+                    "type": "boolean"
+                  },
+                  "image": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "role": {
+                    "enum": ["admin", "user"],
+                    "type": "string"
+                  },
+                  "username": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["email", "name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/adminUser/deleteSolanaWallet": {
       "post": {
         "operationId": "adminUser.deleteSolanaWallet",
@@ -2040,6 +2158,105 @@
                   }
                 },
                 "required": ["userId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminUser/linkDiscordAccount": {
+      "post": {
+        "operationId": "adminUser.linkDiscordAccount",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "userId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["accountId", "userId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/adminUser/linkSolanaWallet": {
+      "post": {
+        "operationId": "adminUser.linkSolanaWallet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "isPrimary": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "userId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["address", "userId"]
               }
             }
           }
@@ -2357,6 +2574,9 @@
                       "email": {
                         "type": "string",
                         "format": "email"
+                      },
+                      "emailVerified": {
+                        "type": "boolean"
                       },
                       "image": {
                         "anyOf": [
@@ -3066,6 +3286,28 @@
     "/core/healthCheck": {
       "post": {
         "operationId": "core.healthCheck",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/core/status": {
+      "post": {
+        "operationId": "core.status",
         "responses": {
           "200": {
             "description": "OK",

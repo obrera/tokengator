@@ -16,6 +16,7 @@ export const adminOrganizationUpdateInputSchema = z.object({
     discordUrl: adminOrganizationOptionalUrlSchema,
     githubUrl: adminOrganizationOptionalUrlSchema,
     logo: z.string().optional(),
+    metadata: z.unknown().optional(),
     name: z.string().trim().min(1),
     slug: z.string().trim().min(1),
     telegramUrl: adminOrganizationOptionalUrlSchema,

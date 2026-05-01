@@ -76,6 +76,26 @@ async function insertOrganization(input: { id: string; name: string; slug: strin
   })
 }
 
+async function insertUser(input: {
+  email: string
+  id: string
+  name: string
+  role?: 'admin' | 'user'
+  username: string
+}) {
+  await database.insert(authSchema.user).values({
+    createdAt: new Date('2026-04-11T00:00:00.000Z'),
+    email: input.email,
+    emailVerified: true,
+    id: input.id,
+    image: null,
+    name: input.name,
+    role: input.role ?? 'user',
+    updatedAt: new Date('2026-04-11T00:00:00.000Z'),
+    username: input.username,
+  })
+}
+
 function syncDatabase(databaseUrl: string) {
   const result = Bun.spawnSync({
     cmd: ['bun', 'run', 'db:push', '--force'],
@@ -142,6 +162,7 @@ afterAll(() => {
 beforeEach(async () => {
   await database.delete(authSchema.member).where(sql`1 = 1`)
   await database.delete(authSchema.organization).where(sql`1 = 1`)
+  await database.delete(authSchema.user).where(sql`1 = 1`)
 })
 
 describe('admin organization update', () => {
@@ -158,6 +179,10 @@ describe('admin organization update', () => {
         discordUrl: '  https://discord.gg/alpha  ',
         githubUrl: '  https://github.com/alpha  ',
         logo: '  https://example.com/alpha.png  ',
+        metadata: {
+          seed: 'dev',
+          slug: 'alpha-dao',
+        },
         name: '  Alpha DAO Updated  ',
         slug: '  alpha-dao-updated  ',
         telegramUrl: '  https://t.me/alpha  ',
@@ -172,6 +197,10 @@ describe('admin organization update', () => {
       discordUrl: 'https://discord.gg/alpha',
       githubUrl: 'https://github.com/alpha',
       logo: 'https://example.com/alpha.png',
+      metadata: {
+        seed: 'dev',
+        slug: 'alpha-dao',
+      },
       name: 'Alpha DAO Updated',
       slug: 'alpha-dao-updated',
       telegramUrl: 'https://t.me/alpha',
@@ -207,6 +236,7 @@ describe('admin organization update', () => {
         description: authSchema.organization.description,
         discordUrl: authSchema.organization.discordUrl,
         githubUrl: authSchema.organization.githubUrl,
+        metadata: authSchema.organization.metadata,
         telegramUrl: authSchema.organization.telegramUrl,
         websiteUrl: authSchema.organization.websiteUrl,
         xUrl: authSchema.organization.xUrl,
@@ -218,6 +248,10 @@ describe('admin organization update', () => {
       description: null,
       discordUrl: null,
       githubUrl: null,
+      metadata: JSON.stringify({
+        seed: 'dev',
+        slug: 'alpha-dao',
+      }),
       telegramUrl: null,
       websiteUrl: null,
       xUrl: null,
@@ -260,5 +294,52 @@ describe('admin organization update', () => {
         })
       })(),
     ).rejects.toThrow()
+  })
+
+  test('adds new members and updates existing member roles', async () => {
+    await insertOrganization({
+      id: 'org-alpha',
+      name: 'Alpha DAO',
+      slug: 'alpha-dao',
+    })
+    await insertUser({
+      email: 'member@example.com',
+      id: 'member-user-id',
+      name: 'Member User',
+      username: 'member',
+    })
+
+    const added = await adminOrganizationRouter.addMember.callable(createAdminCallContext())({
+      organizationId: 'org-alpha',
+      role: 'member',
+      userId: 'member-user-id',
+    })
+    const updated = await adminOrganizationRouter.addMember.callable(createAdminCallContext())({
+      organizationId: 'org-alpha',
+      role: 'admin',
+      userId: 'member-user-id',
+    })
+
+    expect(updated.memberId).toBe(added.memberId)
+    expect(updated).toMatchObject({
+      organizationId: 'org-alpha',
+      role: 'admin',
+      userId: 'member-user-id',
+    })
+
+    const members = await database
+      .select({
+        role: authSchema.member.role,
+        userId: authSchema.member.userId,
+      })
+      .from(authSchema.member)
+      .where(eq(authSchema.member.organizationId, 'org-alpha'))
+
+    expect(members).toEqual([
+      {
+        role: 'admin',
+        userId: 'member-user-id',
+      },
+    ])
   })
 })

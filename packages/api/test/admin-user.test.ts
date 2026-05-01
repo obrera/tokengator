@@ -6,6 +6,8 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { ResolverKind as AssetGroupResolverKind } from '@tokengator/indexer'
 
+type AdminUserLinkDiscordAccount =
+  typeof import('../src/features/admin-user/data-access/admin-user-link-discord-account').adminUserLinkDiscordAccount
 type AdminUserRouter = typeof import('../src/features/admin-user/feature/admin-user-router').adminUserRouter
 type AssetSchema = typeof import('@tokengator/db/schema/asset')
 type AuthSchema = typeof import('@tokengator/db/schema/auth')
@@ -33,6 +35,7 @@ const PREVIOUS_ENV = {} as Partial<Record<(typeof ENV_KEYS)[number], string | un
 const TEST_DATABASE_DIR = mkdtempSync(resolve(tmpdir(), 'tokengator-api-tests-'))
 const TEST_DATABASE_URL = pathToFileURL(resolve(TEST_DATABASE_DIR, 'admin-user.sqlite')).toString()
 
+let adminUserLinkDiscordAccount: AdminUserLinkDiscordAccount
 let adminUserRouter: AdminUserRouter
 let adminSessionCookieToken = ''
 let assetSchema: AssetSchema
@@ -370,6 +373,8 @@ beforeAll(async () => {
   syncDatabase(TEST_DATABASE_URL)
 
   ;({ db: database } = await import('@tokengator/db'))
+  ;({ adminUserLinkDiscordAccount } =
+    await import('../src/features/admin-user/data-access/admin-user-link-discord-account'))
   ;({ adminUserRouter } = await import('../src/features/admin-user/feature/admin-user-router'))
   assetSchema = await import('@tokengator/db/schema/asset')
   authSchema = await import('@tokengator/db/schema/auth')
@@ -432,6 +437,16 @@ describe('admin user router', () => {
 
     await Promise.all([
       expectORPCError(
+        adminUserRouter.create.callable(userContext)({
+          email: 'new@example.com',
+          name: 'New User',
+        }),
+        {
+          code: 'FORBIDDEN',
+          status: 403,
+        },
+      ),
+      expectORPCError(
         adminUserRouter.deleteSolanaWallet.callable(userContext)({
           solanaWalletId: 'wallet-id',
           userId: 'member-user-id',
@@ -461,6 +476,26 @@ describe('admin user router', () => {
         code: 'FORBIDDEN',
         status: 403,
       }),
+      expectORPCError(
+        adminUserRouter.linkDiscordAccount.callable(userContext)({
+          accountId: 'discord-new',
+          userId: 'member-user-id',
+        }),
+        {
+          code: 'FORBIDDEN',
+          status: 403,
+        },
+      ),
+      expectORPCError(
+        adminUserRouter.linkSolanaWallet.callable(userContext)({
+          address: 'wallet-new',
+          userId: 'member-user-id',
+        }),
+        {
+          code: 'FORBIDDEN',
+          status: 403,
+        },
+      ),
       expectORPCError(
         adminUserRouter.removeCommunityMembership.callable(userContext)({
           memberId: 'member-id',
@@ -510,6 +545,91 @@ describe('admin user router', () => {
           status: 403,
         },
       ),
+    ])
+  })
+
+  test('rejects whitespace-only Discord account IDs in data access', async () => {
+    await expect(
+      adminUserLinkDiscordAccount({
+        accountId: '   ',
+        userId: 'missing-user-id',
+      }),
+    ).resolves.toEqual({
+      status: 'discord-account-id-required',
+    })
+  })
+
+  test('creates users and links Discord and Solana accounts', async () => {
+    const adminContext = createCallContext({
+      role: 'admin',
+      sessionToken: adminSessionCookieToken,
+      userId: 'admin-user-id',
+      username: 'admin',
+    })
+    const created = await adminUserRouter.create.callable(adminContext)({
+      email: 'SEED@example.com',
+      image: '  https://example.com/seed.png  ',
+      name: '  Seed User  ',
+      role: 'user',
+      username: '  seed  ',
+    })
+
+    expect(created).toMatchObject({
+      email: 'seed@example.com',
+      emailVerified: true,
+      image: 'https://example.com/seed.png',
+      name: 'Seed User',
+      role: 'user',
+      username: 'seed',
+    })
+
+    await adminUserRouter.linkDiscordAccount.callable(adminContext)({
+      accountId: '  discord-seed  ',
+      userId: created.id,
+    })
+    await adminUserRouter.linkSolanaWallet.callable(adminContext)({
+      address: '  seed-wallet  ',
+      isPrimary: true,
+      name: '  Seed Wallet  ',
+      userId: created.id,
+    })
+    await adminUserRouter.linkSolanaWallet.callable(adminContext)({
+      address: 'seed-wallet',
+      userId: created.id,
+    })
+
+    const accounts = await database
+      .select({
+        accountId: authSchema.account.accountId,
+        providerId: authSchema.account.providerId,
+        userId: authSchema.account.userId,
+      })
+      .from(authSchema.account)
+      .where(eq(authSchema.account.userId, created.id))
+    const wallets = await database
+      .select({
+        address: authSchema.solanaWallet.address,
+        isPrimary: authSchema.solanaWallet.isPrimary,
+        name: authSchema.solanaWallet.name,
+        userId: authSchema.solanaWallet.userId,
+      })
+      .from(authSchema.solanaWallet)
+      .where(eq(authSchema.solanaWallet.userId, created.id))
+
+    expect(accounts).toEqual([
+      {
+        accountId: 'discord-seed',
+        providerId: 'discord',
+        userId: created.id,
+      },
+    ])
+    expect(wallets).toEqual([
+      {
+        address: 'seed-wallet',
+        isPrimary: true,
+        name: 'Seed Wallet',
+        userId: created.id,
+      },
     ])
   })
 

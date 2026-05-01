@@ -2,16 +2,14 @@ import { Command, InvalidArgumentError } from 'commander'
 
 import type { AdminAssetGroupResolverKind, AdminAssetGroupType } from '../api/data-access/admin-api-client'
 import { addCommonAdminOptions, parseIntegerOption } from '../api/util/command-options'
-import {
-  assetGroupsFeatureCreate,
-  assetGroupsFeatureDelete,
-  assetGroupsFeatureGet,
-  assetGroupsFeatureIndex,
-  assetGroupsFeatureIndexRuns,
-  assetGroupsFeatureList,
-  assetGroupsFeatureLookup,
-  assetGroupsFeatureUpdate,
-} from './asset-groups-feature'
+import { assetGroupsFeatureCreate } from './asset-groups-feature-create'
+import { assetGroupsFeatureDelete } from './asset-groups-feature-delete'
+import { assetGroupsFeatureGet } from './asset-groups-feature-get'
+import { assetGroupsFeatureIndex } from './asset-groups-feature-index'
+import { assetGroupsFeatureIndexRuns } from './asset-groups-feature-index-runs'
+import { assetGroupsFeatureList } from './asset-groups-feature-list'
+import { assetGroupsFeatureLookup } from './asset-groups-feature-lookup'
+import { assetGroupsFeatureUpdate } from './asset-groups-feature-update'
 
 type AssetGroupsCreateCommandOptions = {
   address: string

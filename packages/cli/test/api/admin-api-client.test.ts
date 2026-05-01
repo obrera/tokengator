@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { writeFileSync } from 'node:fs'
 
-import { AdminApiError, createAdminApiClient, type AdminApiFetch } from '../../src/api/data-access/admin-api-client'
+import {
+  AdminApiError,
+  createAdminApiClient,
+  createPublicApiClient,
+  type AdminApiFetch,
+} from '../../src/api/data-access/admin-api-client'
 import { cleanupTempConfigHomes, createTempConfigHome, getTempConfigPath } from '../config/config-test-utils'
 
 type CapturedRequest = {
@@ -166,6 +171,36 @@ describe('admin api client', () => {
 
     expect(requests[0]?.headers.get('x-api-key')).toBe('dev-key')
     expect(requests[0]?.url).toBe('http://localhost:3000/api-reference/adminOrganization/list')
+  })
+
+  test('uses explicit credentials without reading a stored profile', async () => {
+    const requests: CapturedRequest[] = []
+    const apiClient = createAdminApiClient({
+      credentials: {
+        apiKey: 'seed-key',
+        apiUrl: 'http://127.0.0.1:3000',
+      },
+      fetch: createFetch(createJsonResponse({ total: 0, users: [] }), requests),
+    })
+
+    await apiClient.userList({})
+
+    expect(requests[0]?.headers.get('x-api-key')).toBe('seed-key')
+    expect(requests[0]?.url).toBe('http://127.0.0.1:3000/api-reference/adminUser/list')
+  })
+
+  test('creates a public client for unauthenticated core status checks', async () => {
+    const requests: CapturedRequest[] = []
+    const apiClient = createPublicApiClient({
+      apiUrl: 'http://127.0.0.1:3000',
+      fetch: createFetch(createJsonResponse({ configured: false }), requests),
+    })
+
+    await expect(apiClient.coreStatus()).resolves.toEqual({
+      configured: false,
+    })
+    expect(requests[0]?.headers.get('x-api-key')).toBeNull()
+    expect(requests[0]?.url).toBe('http://127.0.0.1:3000/api-reference/core/status')
   })
 
   test('adds verbose API failure details', async () => {

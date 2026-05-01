@@ -17,7 +17,6 @@
     "db:local": "turso dev --db-file local.db",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "bun run ./src/seed.ts",
     "db:studio": "drizzle-kit studio",
     "test": "bun test ./test",
     "test:integration": "bun test --timeout 15000 ./test-integration"

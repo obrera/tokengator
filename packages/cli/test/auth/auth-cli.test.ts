@@ -7,7 +7,7 @@ afterEach(() => {
 })
 
 describe('auth cli commands', () => {
-  for (const subcommand of ['login', 'logout', 'whoami'] as const) {
+  for (const subcommand of ['login', 'logout', 'siws-login', 'whoami'] as const) {
     test(`registers --verbose option on auth ${subcommand}`, () => {
       const result = runCli(['auth', subcommand, '--help'], createTempConfigHome())
 

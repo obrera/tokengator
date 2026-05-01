@@ -2,6 +2,7 @@ import { Command } from 'commander'
 
 import { authFeatureLogin } from './auth-feature-login'
 import { authFeatureLogout } from './auth-feature-logout'
+import { authFeatureSiwsLogin } from './auth-feature-siws-login'
 import { authFeatureWhoami } from './auth-feature-whoami'
 
 type AuthCommandOptions = {
@@ -11,6 +12,12 @@ type AuthCommandOptions = {
 
 type AuthLoginCommandOptions = AuthCommandOptions & {
   open?: boolean
+}
+
+type AuthSiwsLoginCommandOptions = AuthCommandOptions & {
+  apiUrl: string
+  definition: string
+  user: string
 }
 
 export function createAuthCommand(): Command {
@@ -40,6 +47,24 @@ export function createAuthCommand(): Command {
     .action(async (options: AuthCommandOptions) => {
       await authFeatureLogout({
         profile: options.profile,
+        verbose: options.verbose,
+      })
+    })
+
+  authCommand
+    .command('siws-login')
+    .description('Log in by signing with a Solana fixture from a seed definition.')
+    .requiredOption('--api-url <apiUrl>', 'API URL to authenticate against.')
+    .requiredOption('--definition <definition>', 'Seed definition JSON file.')
+    .requiredOption('--user <user>', 'Seed username to sign in as.')
+    .option('--profile <profile>', 'Profile to authenticate.')
+    .option('--verbose', 'Show API request failure details.')
+    .action(async (options: AuthSiwsLoginCommandOptions) => {
+      await authFeatureSiwsLogin({
+        apiUrl: options.apiUrl,
+        definition: options.definition,
+        profile: options.profile,
+        user: options.user,
         verbose: options.verbose,
       })
     })

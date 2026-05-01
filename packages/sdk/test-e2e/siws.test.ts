@@ -33,6 +33,7 @@ function runSiwsLoginCheck(user: 'alice' | 'bob') {
 
   return JSON.parse(resultLine.slice('RESULT:'.length)) as {
     sessionUser: {
+      emailVerified: boolean
       id: string
       role: string
       username: string
@@ -58,6 +59,7 @@ describe('seeded SIWS login', () => {
 
     expect(result.userCount).toBe(3)
     expect(result.sessionUser).toMatchObject({
+      emailVerified: true,
       id: result.verificationUser.id,
       role: 'admin',
       username: 'alice',
@@ -74,13 +76,14 @@ describe('seeded SIWS login', () => {
         name: null,
       },
     ])
-  })
+  }, 30_000)
 
   test('Bob signs in with his seeded Solana wallet and resolves to the seeded non-admin user', () => {
     const result = runSiwsLoginCheck('bob')
 
     expect(result.userCount).toBe(3)
     expect(result.sessionUser).toMatchObject({
+      emailVerified: true,
       id: result.verificationUser.id,
       role: 'user',
       username: 'bob',
@@ -97,5 +100,5 @@ describe('seeded SIWS login', () => {
         name: null,
       },
     ])
-  })
+  }, 30_000)
 })

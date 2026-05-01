@@ -8,7 +8,10 @@ import { createAssetGroupsCommand } from './asset-groups/asset-groups-command'
 import { createAuthCommand } from './auth/auth-command'
 import { AuthError } from './auth/data-access/auth-api-client'
 import { createCommunitiesCommand } from './communities/communities-command'
+import { createCommunityRolesCommand } from './community-roles/community-roles-command'
 import { createConfigCommand } from './config/config-command'
+import { createSeedCommand } from './seed/seed-command'
+import { createUsersCommand } from './users/users-command'
 
 function createProgram(): Command {
   const program = new Command()
@@ -21,8 +24,11 @@ function createProgram(): Command {
 
   program.addCommand(createAssetGroupsCommand())
   program.addCommand(createAuthCommand())
+  program.addCommand(createCommunityRolesCommand())
   program.addCommand(createCommunitiesCommand())
   program.addCommand(createConfigCommand())
+  program.addCommand(createSeedCommand())
+  program.addCommand(createUsersCommand())
 
   return program
 }

@@ -1,14 +1,16 @@
-import { Command } from 'commander'
+import { Command, InvalidArgumentError } from 'commander'
 
 import { addCommonAdminOptions, parseIntegerOption } from '../api/util/command-options'
-import {
-  communitiesFeatureCreate,
-  communitiesFeatureDelete,
-  communitiesFeatureGet,
-  communitiesFeatureList,
-  communitiesFeatureOwnerCandidates,
-  communitiesFeatureUpdate,
-} from './communities-feature'
+import { communitiesFeatureCreate } from './communities-feature-create'
+import { communitiesFeatureDelete } from './communities-feature-delete'
+import { communitiesFeatureDiscordConnect } from './communities-feature-discord-connect'
+import { communitiesFeatureGet } from './communities-feature-get'
+import { communitiesFeatureList } from './communities-feature-list'
+import { communitiesFeatureMembersAdd } from './communities-feature-members-add'
+import { communitiesFeatureOwnerCandidates } from './communities-feature-owner-candidates'
+import { communitiesFeatureUpdate } from './communities-feature-update'
+
+type CommunityMemberRole = 'admin' | 'member' | 'owner'
 
 type CommunitiesCreateCommandOptions = {
   json?: boolean
@@ -33,12 +35,27 @@ type CommunitiesGetCommandOptions = {
   verbose?: boolean
 }
 
+type CommunitiesDiscordConnectCommandOptions = {
+  guildId: string
+  json?: boolean
+  profile?: string
+  verbose?: boolean
+}
+
 type CommunitiesListCommandOptions = {
   json?: boolean
   limit?: number
   offset?: number
   profile?: string
   search?: string
+  verbose?: boolean
+}
+
+type CommunitiesMembersAddCommandOptions = {
+  json?: boolean
+  profile?: string
+  role: CommunityMemberRole
+  userId: string
   verbose?: boolean
 }
 
@@ -95,6 +112,14 @@ function parseOwnerCandidateLimit(value: string) {
   })
 }
 
+function parseCommunityMemberRole(value: string): CommunityMemberRole {
+  if (value !== 'admin' && value !== 'member' && value !== 'owner') {
+    throw new InvalidArgumentError('role must be admin, member, or owner.')
+  }
+
+  return value
+}
+
 export function createCommunitiesCommand(): Command {
   const communitiesCommand = new Command('communities').description('Manage Tokengator communities.').action(() => {
     communitiesCommand.outputHelp()
@@ -131,6 +156,18 @@ export function createCommunitiesCommand(): Command {
     await communitiesFeatureGet(organizationId, options)
   })
 
+  const discordCommand = communitiesCommand.command('discord').description('Manage community Discord connections.')
+
+  addCommonAdminOptions(
+    discordCommand
+      .command('connect')
+      .argument('<organization-id>', 'Community organization ID.')
+      .description('Connect a Discord guild to a community.')
+      .requiredOption('--guild-id <guildId>', 'Discord guild ID.'),
+  ).action(async (organizationId: string, options: CommunitiesDiscordConnectCommandOptions) => {
+    await communitiesFeatureDiscordConnect(organizationId, options)
+  })
+
   addCommonAdminOptions(
     communitiesCommand
       .command('list')
@@ -140,6 +177,19 @@ export function createCommunitiesCommand(): Command {
       .option('--search <search>', 'Search by name or slug.'),
   ).action(async (options: CommunitiesListCommandOptions) => {
     await communitiesFeatureList(options)
+  })
+
+  const membersCommand = communitiesCommand.command('members').description('Manage community members.')
+
+  addCommonAdminOptions(
+    membersCommand
+      .command('add')
+      .argument('<organization-id>', 'Community organization ID.')
+      .description('Add a user to a community.')
+      .requiredOption('--role <role>', 'Community member role.', parseCommunityMemberRole)
+      .requiredOption('--user-id <userId>', 'User ID.'),
+  ).action(async (organizationId: string, options: CommunitiesMembersAddCommandOptions) => {
+    await communitiesFeatureMembersAdd(organizationId, options)
   })
 
   addCommonAdminOptions(

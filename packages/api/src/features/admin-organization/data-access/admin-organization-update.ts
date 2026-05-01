@@ -14,6 +14,22 @@ function normalizeOptionalText(value?: string) {
   return trimmedValue ? trimmedValue : null
 }
 
+function serializeMetadata(metadata: unknown): string | null | undefined {
+  if (metadata === undefined) {
+    return undefined
+  }
+
+  if (metadata === null) {
+    return null
+  }
+
+  if (typeof metadata === 'string') {
+    return metadata
+  }
+
+  return JSON.stringify(metadata)
+}
+
 export async function adminOrganizationUpdate(input: AdminOrganizationUpdateInput) {
   const existingOrganization = await adminOrganizationRecordGet(input.organizationId)
 
@@ -47,6 +63,7 @@ export async function adminOrganizationUpdate(input: AdminOrganizationUpdateInpu
       discordUrl: normalizeOptionalText(input.data.discordUrl),
       githubUrl: normalizeOptionalText(input.data.githubUrl),
       logo: adminOrganizationNormalizeLogo(input.data.logo),
+      metadata: serializeMetadata(input.data.metadata),
       name: input.data.name,
       slug: input.data.slug,
       telegramUrl: normalizeOptionalText(input.data.telegramUrl),

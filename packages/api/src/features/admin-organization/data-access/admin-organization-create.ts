@@ -45,6 +45,7 @@ export async function adminOrganizationCreate(input: AdminOrganizationCreateInpu
       userId: input.ownerUserId,
     },
   })
+
   const organizationDetail = await adminOrganizationGet(createdOrganization.id)
 
   if (!organizationDetail) {
