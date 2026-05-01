@@ -5,11 +5,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@toke
 import { useAdminCommunityDiscordConnectionDelete } from '../data-access/use-admin-community-discord-connection-delete'
 import { useAdminCommunityDiscordConnectionRefresh } from '../data-access/use-admin-community-discord-connection-refresh'
 import { useAdminCommunityDiscordConnectionUpsert } from '../data-access/use-admin-community-discord-connection-upsert'
+import { useAdminCommunityDiscordGuildsQuery } from '../data-access/use-admin-community-discord-guilds-query'
 import { useAdminCommunityDiscordRoleSyncEnabledSet } from '../data-access/use-admin-community-discord-role-sync-enabled-set'
 import { AdminCommunityDiscordConnectionUiDeleteDialog } from '../ui/admin-community-discord-connection-ui-delete-dialog'
 import { AdminCommunityDiscordConnectionUiDetails } from '../ui/admin-community-discord-connection-ui-details'
 import { AdminCommunityDiscordConnectionUiForm } from '../ui/admin-community-discord-connection-ui-form'
 import { formatAdminCommunityDiscordCheck } from '../util/admin-community-discord-check'
+
+function AdminCommunityFeatureDiscordConnectionForm({
+  isPending,
+  onSave,
+  organizationId,
+}: {
+  isPending: boolean
+  onSave: (guildId: string) => Promise<boolean>
+  organizationId: string
+}) {
+  const discordGuilds = useAdminCommunityDiscordGuildsQuery(organizationId, true)
+
+  return (
+    <AdminCommunityDiscordConnectionUiForm
+      guildOptions={(discordGuilds.data ?? []).map((guild) => ({
+        assignedCommunityName: guild.assignedCommunity?.name ?? null,
+        disabled: guild.disabled,
+        id: guild.id,
+        name: guild.name,
+      }))}
+      initialGuildId=""
+      isGuildOptionsError={discordGuilds.isError}
+      isGuildOptionsPending={discordGuilds.isPending}
+      isPending={isPending}
+      onSubmit={onSave}
+    />
+  )
+}
 
 export function AdminCommunityFeatureDiscordConnection({
   organization,
@@ -95,10 +124,10 @@ export function AdminCommunityFeatureDiscordConnection({
             onRoleSyncEnabledChange={handleRoleSyncEnabledChange}
           />
         ) : (
-          <AdminCommunityDiscordConnectionUiForm
-            initialGuildId=""
+          <AdminCommunityFeatureDiscordConnectionForm
             isPending={upsertDiscordConnection.isPending}
-            onSubmit={handleSaveDiscordConnection}
+            onSave={handleSaveDiscordConnection}
+            organizationId={organization.id}
           />
         )}
       </CardContent>

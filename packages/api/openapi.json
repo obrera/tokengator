@@ -1384,6 +1384,77 @@
         }
       }
     },
+    "/adminOrganization/listDiscordGuilds": {
+      "post": {
+        "operationId": "adminOrganization.listDiscordGuilds",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "organizationId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["organizationId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "assignedCommunity": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["id", "name", "slug"]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "disabled": {
+                        "type": "boolean"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["assignedCommunity", "disabled", "id", "name"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/adminOrganization/listOwnerCandidates": {
       "post": {
         "operationId": "adminOrganization.listOwnerCandidates",

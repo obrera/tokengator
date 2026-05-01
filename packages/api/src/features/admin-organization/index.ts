@@ -1,5 +1,6 @@
 export type {
   AdminOrganizationDetailEntity,
+  AdminOrganizationDiscordGuildEntity,
   AdminOrganizationEntity,
   AdminOrganizationGatedRoleEntity,
   AdminOrganizationListEntity,
@@ -12,6 +13,7 @@ export type { AdminOrganizationDeleteDiscordConnectionInput } from './data-acces
 export type { AdminOrganizationDeleteInput } from './data-access/admin-organization-delete-input'
 export type { AdminOrganizationGetInput } from './data-access/admin-organization-get-input'
 export type { AdminOrganizationGetDiscordAnnouncementCatalogInput } from './data-access/admin-organization-get-discord-announcement-catalog-input'
+export type { AdminOrganizationListDiscordGuildsInput } from './data-access/admin-organization-list-discord-guilds-input'
 export type { AdminOrganizationListInput } from './data-access/admin-organization-list-input'
 export type { AdminOrganizationListOwnerCandidatesInput } from './data-access/admin-organization-list-owner-candidates-input'
 export type { AdminOrganizationMemberRole } from './data-access/admin-organization-member-role'

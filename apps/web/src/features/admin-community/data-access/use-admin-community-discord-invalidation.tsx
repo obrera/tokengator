@@ -20,9 +20,20 @@ export function useAdminCommunityDiscordInvalidation() {
   async function invalidateConnection(organizationId: string) {
     await Promise.all([
       invalidateAnnouncements(organizationId),
+      invalidateGuilds(organizationId),
       invalidateGuildRoles(organizationId),
       organization.invalidateCommunity(organizationId),
     ])
+  }
+
+  async function invalidateGuilds(organizationId: string) {
+    await queryClient.invalidateQueries({
+      queryKey: orpc.adminOrganization.listDiscordGuilds.key({
+        input: {
+          organizationId,
+        },
+      }),
+    })
   }
 
   async function invalidateGuildRoles(organizationId: string) {
@@ -39,5 +50,6 @@ export function useAdminCommunityDiscordInvalidation() {
     invalidateAnnouncements,
     invalidateConnection,
     invalidateGuildRoles,
+    invalidateGuilds,
   }
 }

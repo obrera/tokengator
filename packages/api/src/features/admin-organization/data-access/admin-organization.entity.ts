@@ -43,6 +43,19 @@ type AdminOrganizationOwnerCandidateRecord = Pick<
 >
 type AdminOrganizationRecord = Pick<InferSelectModel<typeof organization>, keyof typeof adminOrganizationEntityColumns>
 
+type AdminOrganizationAssignedCommunityInput = {
+  id: string
+  name: string
+  slug: string
+}
+
+type AdminOrganizationDiscordGuildInput = {
+  assignedCommunity: AdminOrganizationAssignedCommunityInput | null
+  disabled: boolean
+  id: string
+  name: string
+}
+
 export type AdminOrganizationMemberRecord = {
   createdAt: Date
   id: string
@@ -118,6 +131,10 @@ export function toAdminOrganizationDetailEntity(input: {
   }
 }
 
+export function toAdminOrganizationDiscordGuildEntity(input: AdminOrganizationDiscordGuildInput) {
+  return input
+}
+
 export function toAdminOrganizationListEntity(input: {
   members: Array<Pick<AdminOrganizationMemberRecord, 'name' | 'role' | 'userId' | 'username'>>
   organization: AdminOrganizationEntity
@@ -130,6 +147,7 @@ export function toAdminOrganizationListEntity(input: {
 }
 
 export type AdminOrganizationDetailEntity = ReturnType<typeof toAdminOrganizationDetailEntity>
+export type AdminOrganizationDiscordGuildEntity = ReturnType<typeof toAdminOrganizationDiscordGuildEntity>
 export type AdminOrganizationEntity = ReturnType<typeof toAdminOrganizationEntity>
 export type AdminOrganizationGatedRoleEntity = ReturnType<typeof toAdminOrganizationGatedRoleEntity>
 export type AdminOrganizationListEntity = ReturnType<typeof toAdminOrganizationListEntity>

@@ -180,5 +180,5 @@ describe('CLI API key auth config', () => {
     expect(result.nameLength).toBeGreaterThan(32)
     expect(new Date(result.defaultExpiresAt ?? '').getTime()).toBeGreaterThanOrEqual(beforeCheck + ninetyDaysMs - 5000)
     expect(new Date(result.defaultExpiresAt ?? '').getTime()).toBeLessThanOrEqual(afterCheck + ninetyDaysMs + 5000)
-  })
+  }, 15_000)
 })

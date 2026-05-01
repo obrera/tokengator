@@ -4,6 +4,7 @@ import { adminOrganizationFeatureDeleteDiscordConnection } from './admin-organiz
 import { adminOrganizationFeatureGet } from './admin-organization-feature-get'
 import { adminOrganizationFeatureGetDiscordAnnouncementCatalog } from './admin-organization-feature-get-discord-announcement-catalog'
 import { adminOrganizationFeatureList } from './admin-organization-feature-list'
+import { adminOrganizationFeatureListDiscordGuilds } from './admin-organization-feature-list-discord-guilds'
 import { adminOrganizationFeatureListOwnerCandidates } from './admin-organization-feature-list-owner-candidates'
 import { adminOrganizationFeatureRefreshDiscordConnection } from './admin-organization-feature-refresh-discord-connection'
 import { adminOrganizationFeatureRemoveMember } from './admin-organization-feature-remove-member'
@@ -22,6 +23,7 @@ export const adminOrganizationRouter = {
   get: adminOrganizationFeatureGet,
   getDiscordAnnouncementCatalog: adminOrganizationFeatureGetDiscordAnnouncementCatalog,
   list: adminOrganizationFeatureList,
+  listDiscordGuilds: adminOrganizationFeatureListDiscordGuilds,
   listOwnerCandidates: adminOrganizationFeatureListOwnerCandidates,
   refreshDiscordConnection: adminOrganizationFeatureRefreshDiscordConnection,
   removeMember: adminOrganizationFeatureRemoveMember,
