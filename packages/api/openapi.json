@@ -2790,6 +2790,10 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "holderFilter": {
+                    "enum": ["known", "unknown"],
+                    "type": "string"
+                  },
                   "limit": {
                     "type": "integer",
                     "minimum": 1,

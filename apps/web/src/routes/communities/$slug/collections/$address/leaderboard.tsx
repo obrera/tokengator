@@ -10,6 +10,7 @@ export const Route = createFileRoute('/communities/$slug/collections/$address/le
     const collectionLeaderboard = await context.queryClient.ensureQueryData(
       getCommunityCollectionLeaderboardRouteQueryOptions({
         address: params.address,
+        holderFilter: 'known',
         slug: params.slug,
       }),
     )

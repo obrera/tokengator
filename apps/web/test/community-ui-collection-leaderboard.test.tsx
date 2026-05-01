@@ -150,9 +150,11 @@ describe('CommunityUiCollectionLeaderboard', () => {
     ensureDom()
 
     const onShowMore = mock(() => {})
+    const onHolderFilterChange = mock(() => {})
     const view = render(
       <CommunityUiCollectionLeaderboard
         canShowMore
+        holderFilter="known"
         leaderboard={{
           assetTotal: 3,
           holders: [
@@ -164,7 +166,7 @@ describe('CommunityUiCollectionLeaderboard', () => {
               rank: 1,
               user: {
                 id: 'user-alpha-owner',
-                image: null,
+                image: 'https://example.com/alpha-owner.png',
                 name: 'Alpha Owner',
                 username: 'alpha-owner',
               },
@@ -236,6 +238,7 @@ describe('CommunityUiCollectionLeaderboard', () => {
           ],
           holderTotal: 2,
         }}
+        onHolderFilterChange={onHolderFilterChange}
         onShowMore={onShowMore}
         selectedCollection={{
           address: 'collection-alpha',
@@ -257,6 +260,11 @@ describe('CommunityUiCollectionLeaderboard', () => {
 
     expect(view.getByText('@alpha-owner')).toBeTruthy()
     expect(view.getByText('Alpha Owner')).toBeTruthy()
+    expect(view.container.querySelector('[data-slot="avatar"]')).toBeTruthy()
+
+    fireEvent.click(view.getByText('Unknown'))
+
+    expect(onHolderFilterChange).toHaveBeenCalledWith('unknown')
 
     fireEvent.click(trigger)
 

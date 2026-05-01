@@ -1,14 +1,49 @@
 import { Link } from '@tanstack/react-router'
-import type { CommunityCollectionEntity, CommunityListCollectionLeaderboardResult } from '@tokengator/sdk'
+import { WalletIcon } from 'lucide-react'
+import type {
+  CommunityCollectionEntity,
+  CommunityCollectionLeaderboardHolderFilter,
+  CommunityListCollectionLeaderboardResult,
+} from '@tokengator/sdk'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@tokengator/ui/components/accordion'
 import { Button } from '@tokengator/ui/components/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
+import { Tabs, TabsList, TabsTrigger } from '@tokengator/ui/components/tabs'
 import { UiInfoCard, UiInfoCardLabel, UiInfoCardMeta, UiInfoCardValue } from '@tokengator/ui/components/ui-info-card'
 
-function getCommunityCollectionLeaderboardHolderDescription(
-  holder: CommunityListCollectionLeaderboardResult['holders'][number],
-) {
+import { ProfileUiAvatar } from '@/features/profile/ui/profile-ui-avatar'
+
+type CommunityCollectionLeaderboardHolder = CommunityListCollectionLeaderboardResult['holders'][number]
+
+const communityCollectionLeaderboardHolderFilters = [
+  {
+    label: 'Known',
+    value: 'known',
+  },
+  {
+    label: 'Unknown',
+    value: 'unknown',
+  },
+] satisfies Array<{ label: string; value: CommunityCollectionLeaderboardHolderFilter }>
+
+function getCommunityCollectionLeaderboardDescription(holderFilter: CommunityCollectionLeaderboardHolderFilter) {
+  return holderFilter === 'known'
+    ? 'Registered holders ranked by indexed collection NFTs.'
+    : 'Unlinked wallets ranked by indexed collection NFTs.'
+}
+
+function getCommunityCollectionLeaderboardEmptyDescription(holderFilter: CommunityCollectionLeaderboardHolderFilter) {
+  return holderFilter === 'known'
+    ? 'This collection does not have registered holders yet.'
+    : 'This collection does not have unlinked wallet holders yet.'
+}
+
+function getCommunityCollectionLeaderboardEmptyTitle(holderFilter: CommunityCollectionLeaderboardHolderFilter) {
+  return holderFilter === 'known' ? 'No known holders found' : 'No unknown holders found'
+}
+
+function getCommunityCollectionLeaderboardHolderDescription(holder: CommunityCollectionLeaderboardHolder) {
   if (holder.kind === 'user' && holder.user) {
     return holder.user.username ? holder.user.name : 'Linked TokenGator profile'
   }
@@ -17,16 +52,28 @@ function getCommunityCollectionLeaderboardHolderDescription(
 }
 
 function getCommunityCollectionLeaderboardAssetTitle(
-  asset: CommunityListCollectionLeaderboardResult['holders'][number]['wallets'][number]['assets'][number],
+  asset: CommunityCollectionLeaderboardHolder['wallets'][number]['assets'][number],
 ) {
   return asset.metadataName?.trim() || asset.address
 }
 
 function getCommunityCollectionLeaderboardOwnerSearch(
-  _holder: CommunityListCollectionLeaderboardResult['holders'][number],
-  wallet: CommunityListCollectionLeaderboardResult['holders'][number]['wallets'][number],
+  _holder: CommunityCollectionLeaderboardHolder,
+  wallet: CommunityCollectionLeaderboardHolder['wallets'][number],
 ) {
   return wallet.address
+}
+
+function CommunityCollectionLeaderboardHolderAvatar({ holder }: { holder: CommunityCollectionLeaderboardHolder }) {
+  if (holder.user) {
+    return <ProfileUiAvatar user={holder.user} />
+  }
+
+  return (
+    <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
+      <WalletIcon aria-hidden="true" className="size-4" />
+    </span>
+  )
 }
 
 function CommunityCollectionLeaderboardAssetGrid({
@@ -35,7 +82,7 @@ function CommunityCollectionLeaderboardAssetGrid({
   selectedCollection,
   slug,
 }: {
-  assets: CommunityListCollectionLeaderboardResult['holders'][number]['wallets'][number]['assets']
+  assets: CommunityCollectionLeaderboardHolder['wallets'][number]['assets']
   owner: string
   selectedCollection: CommunityCollectionEntity
   slug: string
@@ -84,15 +131,21 @@ function CommunityCollectionLeaderboardAssetGrid({
 
 export function CommunityUiCollectionLeaderboard({
   canShowMore,
+  holderFilter,
+  isLoading,
   isShowingMore,
   leaderboard,
+  onHolderFilterChange,
   onShowMore,
   selectedCollection,
   slug,
 }: {
   canShowMore?: boolean
+  holderFilter: CommunityCollectionLeaderboardHolderFilter
+  isLoading?: boolean
   isShowingMore?: boolean
   leaderboard: CommunityListCollectionLeaderboardResult
+  onHolderFilterChange: (holderFilter: CommunityCollectionLeaderboardHolderFilter) => void
   onShowMore?: () => void
   selectedCollection: CommunityCollectionEntity
   slug: string
@@ -119,20 +172,43 @@ export function CommunityUiCollectionLeaderboard({
       <Card>
         <CardHeader>
           <CardTitle>Leaderboard</CardTitle>
-          <CardDescription>Top holders ranked by indexed collection NFTs.</CardDescription>
+          <CardDescription>{getCommunityCollectionLeaderboardDescription(holderFilter)}</CardDescription>
+          <CardAction>
+            <Tabs
+              onValueChange={(value) => {
+                if (value === 'known' || value === 'unknown') {
+                  onHolderFilterChange(value)
+                }
+              }}
+              value={holderFilter}
+            >
+              <TabsList aria-label="Leaderboard holder filter">
+                {communityCollectionLeaderboardHolderFilters.map((filter) => (
+                  <TabsTrigger key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </CardAction>
         </CardHeader>
         <CardContent>
-          {leaderboard.holders.length > 0 ? (
+          {isLoading ? (
+            <div className="border p-6">
+              <div className="text-muted-foreground text-sm">Loading leaderboard...</div>
+            </div>
+          ) : leaderboard.holders.length > 0 ? (
             <div className="grid gap-4">
               <Accordion className="rounded-none border-0" defaultValue={[]} multiple>
                 {leaderboard.holders.map((holder) => (
                   <AccordionItem key={holder.holderId} value={holder.holderId}>
                     <AccordionTrigger className="items-center gap-3 p-3 hover:no-underline">
-                      <span className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+                      <span className="grid min-w-0 flex-1 grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3">
                         <span className="text-muted-foreground w-8 text-left text-xs">#{holder.rank}</span>
-                        <span className="grid min-w-0 gap-1">
-                          <span className="truncate font-medium">{holder.displayName}</span>
-                          <span className="text-muted-foreground truncate text-xs">
+                        <CommunityCollectionLeaderboardHolderAvatar holder={holder} />
+                        <span className="grid min-w-0 gap-0">
+                          <span className="truncate leading-tight font-medium">{holder.displayName}</span>
+                          <span className="text-muted-foreground truncate text-xs leading-tight">
                             {getCommunityCollectionLeaderboardHolderDescription(holder)}
                           </span>
                         </span>
@@ -175,8 +251,10 @@ export function CommunityUiCollectionLeaderboard({
             </div>
           ) : (
             <div className="border p-6">
-              <div className="font-medium">No holders found</div>
-              <div className="text-muted-foreground text-sm">This collection does not have indexed holders yet.</div>
+              <div className="font-medium">{getCommunityCollectionLeaderboardEmptyTitle(holderFilter)}</div>
+              <div className="text-muted-foreground text-sm">
+                {getCommunityCollectionLeaderboardEmptyDescription(holderFilter)}
+              </div>
             </div>
           )}
         </CardContent>

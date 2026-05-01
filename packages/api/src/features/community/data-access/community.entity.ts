@@ -88,6 +88,8 @@ export type CommunityCollectionLeaderboardUserEntity = {
   username: string | null
 }
 
+export type CommunityCollectionLeaderboardHolderFilter = 'known' | 'unknown'
+
 export type CommunityCollectionLeaderboardWalletEntity = {
   address: string
   assets: CommunityCollectionLeaderboardAssetEntity[]

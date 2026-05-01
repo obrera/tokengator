@@ -2716,6 +2716,48 @@ describe('community routes', () => {
       ],
       holderTotal: 3,
     })
+
+    const knownResult = await communityRouter.listCollectionLeaderboard.callable(
+      createCallContext({
+        userId: 'viewer-user-id',
+        username: 'viewer',
+      }),
+    )({
+      address: 'collection-alpha',
+      holderFilter: 'known',
+      slug: 'alpha-dao',
+    })
+    const unknownResult = await communityRouter.listCollectionLeaderboard.callable(
+      createCallContext({
+        userId: 'viewer-user-id',
+        username: 'viewer',
+      }),
+    )({
+      address: 'collection-alpha',
+      holderFilter: 'unknown',
+      slug: 'alpha-dao',
+    })
+
+    expect(knownResult.assetTotal).toBe(6)
+    expect(knownResult.holderTotal).toBe(2)
+    expect(knownResult.holders.map((holder) => ({ holderId: holder.holderId, rank: holder.rank }))).toEqual([
+      {
+        holderId: 'user:user-alpha-owner',
+        rank: 1,
+      },
+      {
+        holderId: 'user:user-beta-owner',
+        rank: 2,
+      },
+    ])
+    expect(unknownResult.assetTotal).toBe(6)
+    expect(unknownResult.holderTotal).toBe(1)
+    expect(unknownResult.holders.map((holder) => ({ holderId: holder.holderId, rank: holder.rank }))).toEqual([
+      {
+        holderId: 'wallet:owner-zed',
+        rank: 1,
+      },
+    ])
   })
 
   test('listCollectionLeaderboard clamps default and explicit holder limits', async () => {

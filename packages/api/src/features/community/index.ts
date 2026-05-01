@@ -10,6 +10,7 @@ export type {
   CommunityCollectionInsightsTraitOptionEntity,
   CommunityCollectionLeaderboardAssetEntity,
   CommunityCollectionLeaderboardHolderEntity,
+  CommunityCollectionLeaderboardHolderFilter,
   CommunityCollectionLeaderboardUserEntity,
   CommunityCollectionLeaderboardWalletEntity,
   CommunityCollectionOwnerCandidateEntity,

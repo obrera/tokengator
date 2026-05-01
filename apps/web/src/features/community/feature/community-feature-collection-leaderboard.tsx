@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import type { CommunityCollectionEntity, CommunityListCollectionLeaderboardResult } from '@tokengator/sdk'
+import type {
+  CommunityCollectionEntity,
+  CommunityCollectionLeaderboardHolderFilter,
+  CommunityListCollectionLeaderboardResult,
+} from '@tokengator/sdk'
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@tokengator/ui/components/card'
 
@@ -30,16 +34,20 @@ export function CommunityFeatureCollectionLeaderboard({
   selectedCollection: CommunityCollectionEntity
   slug: string
 }) {
+  const [holderFilter, setHolderFilter] = useState<CommunityCollectionLeaderboardHolderFilter>('known')
   const [leaderboardLimit, setLeaderboardLimit] = useState<number | undefined>(undefined)
   const currentLeaderboardLimit = leaderboardLimit ?? COMMUNITY_COLLECTION_LEADERBOARD_LIMIT_INCREMENT
   const collectionLeaderboard = useCommunityCollectionLeaderboardQuery(
     {
       address: selectedCollection.address,
+      holderFilter,
       limit: leaderboardLimit,
       slug,
     },
     {
-      initialData: leaderboardLimit === undefined ? initialCollectionLeaderboard : undefined,
+      initialData:
+        holderFilter === 'known' && leaderboardLimit === undefined ? initialCollectionLeaderboard : undefined,
+      keepPreviousData: leaderboardLimit !== undefined,
     },
   )
 
@@ -47,23 +55,34 @@ export function CommunityFeatureCollectionLeaderboard({
     return <CommunityCollectionLeaderboardNotFoundCard />
   }
 
-  if (collectionLeaderboard.isPending && !collectionLeaderboard.data) {
-    return <div className="text-muted-foreground text-sm">Loading leaderboard...</div>
+  const fallbackLeaderboard: CommunityListCollectionLeaderboardResult = {
+    assetTotal: initialCollectionLeaderboard?.assetTotal ?? 0,
+    holders: [],
+    holderTotal: 0,
   }
+  const displayLeaderboard = collectionLeaderboard.data ?? fallbackLeaderboard
 
   return (
     <>
       {collectionLeaderboard.error ? (
         <div className="text-destructive text-sm">{collectionLeaderboard.error.message}</div>
       ) : null}
-      {collectionLeaderboard.data ? (
+      {collectionLeaderboard.data || collectionLeaderboard.isPending ? (
         <CommunityUiCollectionLeaderboard
           canShowMore={
-            collectionLeaderboard.data.holders.length < collectionLeaderboard.data.holderTotal &&
-            currentLeaderboardLimit < COMMUNITY_COLLECTION_LEADERBOARD_MAX_LIMIT
+            collectionLeaderboard.data
+              ? collectionLeaderboard.data.holders.length < collectionLeaderboard.data.holderTotal &&
+                currentLeaderboardLimit < COMMUNITY_COLLECTION_LEADERBOARD_MAX_LIMIT
+              : false
           }
+          holderFilter={holderFilter}
+          isLoading={collectionLeaderboard.isPending && !collectionLeaderboard.data}
           isShowingMore={collectionLeaderboard.isFetching}
-          leaderboard={collectionLeaderboard.data}
+          leaderboard={displayLeaderboard}
+          onHolderFilterChange={(nextHolderFilter) => {
+            setHolderFilter(nextHolderFilter)
+            setLeaderboardLimit(undefined)
+          }}
           onShowMore={() => {
             setLeaderboardLimit(
               Math.min(

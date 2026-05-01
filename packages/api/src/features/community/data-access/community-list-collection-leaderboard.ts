@@ -10,6 +10,7 @@ import { communityGetBySlug } from './community-get-by-slug'
 import type {
   CommunityCollectionLeaderboardAssetEntity,
   CommunityCollectionLeaderboardHolderEntity,
+  CommunityCollectionLeaderboardHolderFilter,
   CommunityCollectionLeaderboardUserEntity,
   CommunityCollectionLeaderboardWalletEntity,
   CommunityListCollectionLeaderboardResult,
@@ -72,6 +73,17 @@ function getCommunityCollectionLeaderboardUserSortLabel(user: CommunityCollectio
   return user.username ?? user.name
 }
 
+function matchesCommunityCollectionLeaderboardHolderFilter(
+  holder: HolderAccumulator,
+  holderFilter?: CommunityCollectionLeaderboardHolderFilter,
+) {
+  if (!holderFilter) {
+    return true
+  }
+
+  return holderFilter === 'known' ? holder.kind === 'user' : holder.kind === 'wallet'
+}
+
 async function getCommunityCollectionLeaderboardAssetsByOwner(input: {
   collectionId: string
   ownerAddresses: string[]
@@ -119,6 +131,7 @@ async function getCommunityCollectionLeaderboardAssetsByOwner(input: {
 
 export async function communityListCollectionLeaderboard(input: {
   address: string
+  holderFilter?: CommunityCollectionLeaderboardHolderFilter
   limit?: number
   slug: string
 }): Promise<CommunityListCollectionLeaderboardResult | null> {
@@ -225,7 +238,10 @@ export async function communityListCollectionLeaderboard(input: {
     })
   }
 
-  const rankedHolders = [...holdersById.values()]
+  const filteredHolders = [...holdersById.values()].filter((holder) =>
+    matchesCommunityCollectionLeaderboardHolderFilter(holder, input.holderFilter),
+  )
+  const rankedHolders = filteredHolders
     .map((holder) => ({
       ...holder,
       wallets: holder.wallets.sort(compareCommunityCollectionLeaderboardWallets),
@@ -255,6 +271,6 @@ export async function communityListCollectionLeaderboard(input: {
   return {
     assetTotal: ownerRows.reduce((total, ownerRow) => total + ownerRow.assetTotal, 0),
     holders,
-    holderTotal: holdersById.size,
+    holderTotal: filteredHolders.length,
   }
 }

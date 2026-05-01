@@ -1,5 +1,8 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import type { CommunityListCollectionLeaderboardResult } from '@tokengator/sdk'
+import type {
+  CommunityCollectionLeaderboardHolderFilter,
+  CommunityListCollectionLeaderboardResult,
+} from '@tokengator/sdk'
 
 import { orpc } from '@/lib/orpc'
 
@@ -8,6 +11,7 @@ export const COMMUNITY_COLLECTION_LEADERBOARD_MAX_LIMIT = 1000
 
 export interface CommunityCollectionLeaderboardInput {
   address: string
+  holderFilter?: CommunityCollectionLeaderboardHolderFilter
   limit?: number
   slug: string
 }
@@ -34,20 +38,27 @@ export function getCommunityCollectionLeaderboardQueryKey(input: CommunityCollec
   return orpc.community.listCollectionLeaderboard.key({
     input: {
       address: input.address,
+      holderFilter: input.holderFilter,
       limit: input.limit,
       slug: input.slug,
     },
   })
 }
 
-export function getCommunityCollectionLeaderboardQueryOptions(input: CommunityCollectionLeaderboardInput) {
+export function getCommunityCollectionLeaderboardQueryOptions(
+  input: CommunityCollectionLeaderboardInput,
+  options?: {
+    keepPreviousData?: boolean
+  },
+) {
   return queryOptions({
     enabled: Boolean(input.address) && Boolean(input.slug),
-    placeholderData: (previousData) => previousData,
+    placeholderData: options?.keepPreviousData ? (previousData) => previousData : undefined,
     queryFn: () =>
       getCommunityCollectionLeaderboardOrNull(() =>
         orpc.community.listCollectionLeaderboard.call({
           address: input.address,
+          holderFilter: input.holderFilter,
           limit: input.limit,
           slug: input.slug,
         }),
@@ -65,6 +76,7 @@ export function getCommunityCollectionLeaderboardRouteQueryOptions(input: Commun
           getCommunityCollectionLeaderboard({
             data: {
               address: input.address,
+              holderFilter: input.holderFilter,
               limit: input.limit,
               slug: input.slug,
             },
@@ -79,10 +91,13 @@ export function useCommunityCollectionLeaderboardQuery(
   input: CommunityCollectionLeaderboardInput,
   options?: {
     initialData?: CommunityListCollectionLeaderboardResult | null
+    keepPreviousData?: boolean
   },
 ) {
   return useQuery({
-    ...getCommunityCollectionLeaderboardQueryOptions(input),
+    ...getCommunityCollectionLeaderboardQueryOptions(input, {
+      keepPreviousData: options?.keepPreviousData,
+    }),
     initialData: options?.initialData,
   })
 }

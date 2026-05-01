@@ -4,7 +4,11 @@ import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test'
 // @ts-expect-error jsdom is installed for tests but does not expose declarations in this workspace.
 import { JSDOM } from 'jsdom'
-import type { CommunityCollectionEntity, CommunityListCollectionLeaderboardResult } from '@tokengator/sdk'
+import type {
+  CommunityCollectionEntity,
+  CommunityCollectionLeaderboardHolderFilter,
+  CommunityListCollectionLeaderboardResult,
+} from '@tokengator/sdk'
 
 const domGlobalKeys = [
   'Element',
@@ -24,6 +28,7 @@ const domGlobalKeys = [
 
 type LeaderboardQueryInput = {
   address: string
+  holderFilter?: CommunityCollectionLeaderboardHolderFilter
   limit?: number
   slug: string
 }
@@ -241,6 +246,7 @@ describe('CommunityFeatureCollectionLeaderboard', () => {
     expect(leaderboardQueryCalls).toHaveLength(1)
     expect(leaderboardQueryCalls[0]?.input).toEqual({
       address: 'collection-alpha',
+      holderFilter: 'known',
       limit: undefined,
       slug: 'alpha-dao',
     })
@@ -251,9 +257,21 @@ describe('CommunityFeatureCollectionLeaderboard', () => {
     expect(leaderboardQueryCalls).toHaveLength(2)
     expect(leaderboardQueryCalls[1]?.input).toEqual({
       address: 'collection-alpha',
+      holderFilter: 'known',
       limit: 200,
       slug: 'alpha-dao',
     })
     expect(leaderboardQueryCalls[1]?.options?.initialData).toBeUndefined()
+
+    fireEvent.click(view.getByText('Unknown'))
+
+    expect(leaderboardQueryCalls).toHaveLength(3)
+    expect(leaderboardQueryCalls[2]?.input).toEqual({
+      address: 'collection-alpha',
+      holderFilter: 'unknown',
+      limit: undefined,
+      slug: 'alpha-dao',
+    })
+    expect(leaderboardQueryCalls[2]?.options?.initialData).toBeUndefined()
   })
 })
