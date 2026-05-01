@@ -63,6 +63,12 @@ export type AdminCommunityRoleSetDiscordRoleMappingResult = {
 
 export type AdminCommunityRoleApplyDiscordRoleSyncResult = CommunityRoleDiscordSyncApply
 export type AdminCommunityRoleApplySyncResult = CommunityRoleSyncPreview
+export type AdminCommunityRoleCreateDiscordRoleMappingResult = {
+  created: boolean
+  discordRoleId: string
+  discordRoleName: string
+  mapping: AdminCommunityRoleDiscordMappingStatus
+}
 export type AdminCommunityRoleListRunsResult =
   | {
       kind: 'discord'

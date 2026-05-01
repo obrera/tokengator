@@ -2,6 +2,7 @@ export type {
   AdminCommunityRoleApplyDiscordRoleSyncResult,
   AdminCommunityRoleApplySyncResult,
   AdminCommunityRoleConditionEntity,
+  AdminCommunityRoleCreateDiscordRoleMappingResult,
   AdminCommunityRoleDiscordGuildRolesResult,
   AdminCommunityRoleDiscordMappingStatus,
   AdminCommunityRoleEntity,
@@ -14,6 +15,7 @@ export type {
 export type { AdminCommunityRoleApplyDiscordRoleSyncInput } from './data-access/admin-community-role-apply-discord-role-sync-input'
 export type { AdminCommunityRoleApplySyncInput } from './data-access/admin-community-role-apply-sync-input'
 export type { AdminCommunityRoleConditionInput } from './data-access/admin-community-role-condition-input'
+export type { AdminCommunityRoleCreateDiscordRoleMappingInput } from './data-access/admin-community-role-create-discord-role-mapping-input'
 export type { AdminCommunityRoleCreateInput } from './data-access/admin-community-role-create-input'
 export type { AdminCommunityRoleDeleteInput } from './data-access/admin-community-role-delete-input'
 export type { AdminCommunityRoleGetSyncStatusInput } from './data-access/admin-community-role-get-sync-status-input'

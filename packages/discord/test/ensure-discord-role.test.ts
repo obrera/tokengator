@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { REST, Routes } from 'discord.js'
 import type { DiscordEnv } from '@tokengator/env/discord'
 
-import { ensureDiscordRole, listDiscordRoles } from '../src/ensure-discord-role'
+import { type DiscordRoleRecord, ensureDiscordRole, listDiscordRoles } from '../src/ensure-discord-role'
 
 const baseEnv = {
   API_URL: 'https://api.example.com',
@@ -280,6 +280,96 @@ describe('ensureDiscordRole', () => {
     })
   })
 
+  test('creates the role when a caller rejects an existing same-name role', async () => {
+    let postCallCount = 0
+
+    REST.prototype.get = async function get() {
+      return [
+        {
+          id: 'role-managed',
+          managed: true,
+          name: 'PERK Holders',
+        },
+      ]
+    }
+    REST.prototype.post = async function post() {
+      postCallCount += 1
+
+      return {
+        id: 'role-created',
+        name: 'PERK Holders',
+      }
+    }
+
+    await expect(
+      ensureDiscordRole(
+        { env: baseEnv },
+        {
+          canUseExistingRole: (role) => !role.managed,
+          name: 'PERK Holders',
+        },
+      ),
+    ).resolves.toEqual({
+      created: true,
+      roleId: 'role-created',
+      roleName: 'PERK Holders',
+    })
+
+    expect(postCallCount).toBe(1)
+  })
+
+  test('fetches full roles for caller-provided state without an ordered role list', async () => {
+    let getCallCount = 0
+    let postCallCount = 0
+    const eligibleRole = {
+      id: 'role-eligible',
+      managed: false,
+      name: 'PERK Holders',
+    } as DiscordRoleRecord
+    const managedRole = {
+      id: 'role-managed',
+      managed: true,
+      name: 'PERK Holders',
+    } as DiscordRoleRecord
+    const state = {
+      guildId: baseEnv.DISCORD_GUILD_ID,
+      rest: {
+        get: async () => {
+          getCallCount += 1
+
+          return [managedRole, eligibleRole]
+        },
+        post: async () => {
+          postCallCount += 1
+
+          return {
+            id: 'role-created',
+            name: 'PERK Holders',
+          }
+        },
+      },
+      rolesByName: new Map([['PERK Holders', managedRole]]),
+    }
+
+    await expect(
+      ensureDiscordRole(
+        { env: baseEnv },
+        {
+          canUseExistingRole: (role) => !role.managed,
+          name: 'PERK Holders',
+          state,
+        },
+      ),
+    ).resolves.toEqual({
+      created: false,
+      roleId: 'role-eligible',
+      roleName: 'PERK Holders',
+    })
+
+    expect(getCallCount).toBe(1)
+    expect(postCallCount).toBe(0)
+  })
+
   test('rejects a provisioning state from a different guild', async () => {
     let getCallCount = 0
     let postCallCount = 0
@@ -300,6 +390,7 @@ describe('ensureDiscordRole', () => {
           }
         },
       },
+      roles: [],
       rolesByName: new Map(),
     }
 

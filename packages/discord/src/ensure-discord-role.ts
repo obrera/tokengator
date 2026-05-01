@@ -9,15 +9,17 @@ export interface DiscordRoleRestClient {
   post(route: string, options: { body?: unknown }): Promise<unknown>
 }
 
-type DiscordRoleRecord = RESTGetAPIGuildRolesResult[number]
+export type DiscordRoleRecord = RESTGetAPIGuildRolesResult[number]
 
 export interface DiscordRoleProvisioningState {
   guildId: string
   rest: DiscordRoleRestClient
+  roles?: DiscordRoleRecord[]
   rolesByName: Map<string, DiscordRoleRecord>
 }
 
 export interface EnsureDiscordRoleOptions {
+  canUseExistingRole?: (role: DiscordRoleRecord) => boolean
   guildId?: string
   name: string
   state?: DiscordRoleProvisioningState
@@ -49,6 +51,14 @@ function getDiscordRoleRestClient(
   return new REST({ version: '10' }).setToken(token)
 }
 
+function findDiscordRoleByName(input: {
+  canUseExistingRole?: (role: DiscordRoleRecord) => boolean
+  name: string
+  roles: DiscordRoleRecord[]
+}) {
+  return input.roles.find((role) => role.name === input.name && (input.canUseExistingRole?.(role) ?? true))
+}
+
 export async function listDiscordRoles(
   ctx: Pick<DiscordContext, 'env'>,
   options: ListDiscordRolesOptions = {},
@@ -60,6 +70,7 @@ export async function listDiscordRoles(
   return {
     guildId,
     rest,
+    roles,
     rolesByName: new Map([...roles].reverse().map((role) => [role.name, role] as const)),
   }
 }
@@ -77,11 +88,13 @@ export async function ensureDiscordRole(
   }
 
   const rest = options.state?.rest ?? getDiscordRoleRestClient(ctx, options)
-  const matchingRole = options.state
-    ? options.state.rolesByName.get(options.name)
-    : ((await rest.get(Routes.guildRoles(guildId))) as RESTGetAPIGuildRolesResult).find(
-        (role) => role.name === options.name,
-      )
+  const matchingRole = findDiscordRoleByName({
+    canUseExistingRole: options.canUseExistingRole,
+    name: options.name,
+    roles: options.state
+      ? (options.state.roles ?? ((await rest.get(Routes.guildRoles(guildId))) as RESTGetAPIGuildRolesResult))
+      : ((await rest.get(Routes.guildRoles(guildId))) as RESTGetAPIGuildRolesResult),
+  })
 
   if (matchingRole) {
     return {
@@ -98,6 +111,7 @@ export async function ensureDiscordRole(
   })) as RESTPostAPIGuildRoleResult
 
   options.state?.rolesByName.set(role.name, role)
+  options.state?.roles?.push(role)
 
   return {
     created: true,

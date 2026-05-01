@@ -1,6 +1,7 @@
 import { adminCommunityRoleFeatureApplyDiscordRoleSync } from './admin-community-role-feature-apply-discord-role-sync'
 import { adminCommunityRoleFeatureApplySync } from './admin-community-role-feature-apply-sync'
 import { adminCommunityRoleFeatureCreate } from './admin-community-role-feature-create'
+import { adminCommunityRoleFeatureCreateDiscordRoleMapping } from './admin-community-role-feature-create-discord-role-mapping'
 import { adminCommunityRoleFeatureDelete } from './admin-community-role-feature-delete'
 import { adminCommunityRoleFeatureGetSyncStatus } from './admin-community-role-feature-get-sync-status'
 import { adminCommunityRoleFeatureList } from './admin-community-role-feature-list'
@@ -15,6 +16,7 @@ export const adminCommunityRoleRouter = {
   applyDiscordRoleSync: adminCommunityRoleFeatureApplyDiscordRoleSync,
   applySync: adminCommunityRoleFeatureApplySync,
   create: adminCommunityRoleFeatureCreate,
+  createDiscordRoleMapping: adminCommunityRoleFeatureCreateDiscordRoleMapping,
   delete: adminCommunityRoleFeatureDelete,
   getSyncStatus: adminCommunityRoleFeatureGetSyncStatus,
   list: adminCommunityRoleFeatureList,

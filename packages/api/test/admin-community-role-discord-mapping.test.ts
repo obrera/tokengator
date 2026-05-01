@@ -10,6 +10,7 @@ type CommunityRoleSchema = typeof import('@tokengator/db/schema/community-role')
 type DatabaseClient = (typeof import('@tokengator/db'))['db']
 type AdminCommunityRoleRouter =
   typeof import('../src/features/admin-community-role/feature/admin-community-role-router').adminCommunityRoleRouter
+type EnsureDiscordRoleResult = import('@tokengator/discord/ensure-discord-role').EnsureDiscordRoleResult
 type InspectDiscordGuildRolesResult =
   import('@tokengator/discord/inspect-discord-guild-roles').InspectDiscordGuildRolesResult
 
@@ -21,6 +22,9 @@ let adminCommunityRoleRouter: AdminCommunityRoleRouter
 let authSchema: AuthSchema
 let communityRoleSchema: CommunityRoleSchema
 let database: DatabaseClient
+let ensureDiscordRoleCallCount = 0
+let ensureDiscordRoleImplementation: (options: { guildId?: string; name: string }) => Promise<EnsureDiscordRoleResult>
+let ensureDiscordRoleInputs: Array<{ canUseExistingRole: boolean; guildId?: string; name: string }> = []
 let inspectDiscordGuildRolesCallCount = 0
 let inspectDiscordGuildRolesImplementation: () => Promise<InspectDiscordGuildRolesResult>
 
@@ -187,8 +191,28 @@ beforeAll(async () => {
   process.env.SOLANA_CLUSTER = 'devnet'
   process.env.SOLANA_ENDPOINT_PUBLIC = 'https://api.devnet.solana.com'
 
+  ensureDiscordRoleImplementation = async (options) => ({
+    created: true,
+    roleId: 'discord-role-created',
+    roleName: options.name,
+  })
   inspectDiscordGuildRolesImplementation = async () => createInspectionResult()
 
+  mock.module('@tokengator/discord/ensure-discord-role', () => ({
+    ensureDiscordRole: async (
+      _ctx: unknown,
+      options: { canUseExistingRole?: unknown; guildId?: string; name: string },
+    ) => {
+      ensureDiscordRoleCallCount += 1
+      ensureDiscordRoleInputs.push({
+        canUseExistingRole: typeof options.canUseExistingRole === 'function',
+        guildId: options.guildId,
+        name: options.name,
+      })
+
+      return await ensureDiscordRoleImplementation(options)
+    },
+  }))
   mock.module('@tokengator/discord/inspect-discord-guild-roles', () => ({
     inspectDiscordGuildRoles: async () => {
       inspectDiscordGuildRolesCallCount += 1
@@ -215,6 +239,13 @@ afterAll(() => {
 })
 
 beforeEach(async () => {
+  ensureDiscordRoleCallCount = 0
+  ensureDiscordRoleInputs = []
+  ensureDiscordRoleImplementation = async (options) => ({
+    created: true,
+    roleId: 'discord-role-created',
+    roleName: options.name,
+  })
   inspectDiscordGuildRolesCallCount = 0
   inspectDiscordGuildRolesImplementation = async () => createInspectionResult()
 
@@ -326,6 +357,158 @@ describe('admin community role Discord mapping', () => {
           name: 'Discord Activities',
         },
       ],
+    })
+  })
+
+  test('creates a Discord role when only a managed same-name role exists', async () => {
+    const organizationId = crypto.randomUUID()
+    let createdRoleVisible = false
+
+    await insertOrganization({
+      id: organizationId,
+      name: 'Acme',
+      slug: 'acme',
+    })
+    await insertCommunityDiscordConnection({
+      guildId: '123456789012345678',
+      organizationId,
+    })
+    await insertTeam({
+      id: 'team-perk-holders',
+      name: 'PERK Holders',
+      organizationId,
+    })
+    await insertCommunityRole({
+      id: 'role-perk-holders',
+      name: 'PERK Holders',
+      organizationId,
+      slug: 'perk-holders',
+      teamId: 'team-perk-holders',
+    })
+    ensureDiscordRoleImplementation = async (options) => {
+      createdRoleVisible = true
+
+      return {
+        created: true,
+        roleId: 'discord-role-perk-holders',
+        roleName: options.name,
+      }
+    }
+    inspectDiscordGuildRolesImplementation = async () =>
+      createInspectionResult({
+        roles: createdRoleVisible
+          ? [
+              {
+                assignable: true,
+                checks: [],
+                id: 'discord-role-perk-holders',
+                isDefault: false,
+                managed: false,
+                name: 'PERK Holders',
+                position: 5,
+              },
+            ]
+          : [
+              {
+                assignable: false,
+                checks: ['discord_role_managed'],
+                id: 'discord-role-managed-perk-holders',
+                isDefault: false,
+                managed: true,
+                name: 'PERK Holders',
+                position: 5,
+              },
+            ],
+      })
+
+    const result = await adminCommunityRoleRouter.createDiscordRoleMapping.callable(createAdminCallContext())({
+      communityRoleId: 'role-perk-holders',
+    })
+
+    expect(ensureDiscordRoleCallCount).toBe(1)
+    expect(ensureDiscordRoleInputs).toEqual([
+      {
+        canUseExistingRole: true,
+        guildId: '123456789012345678',
+        name: 'PERK Holders',
+      },
+    ])
+    expect(inspectDiscordGuildRolesCallCount).toBe(2)
+    expect(result).toEqual({
+      created: true,
+      discordRoleId: 'discord-role-perk-holders',
+      discordRoleName: 'PERK Holders',
+      mapping: {
+        checks: [],
+        status: 'ready',
+      },
+    })
+
+    const list = await adminCommunityRoleRouter.list.callable(createAdminCallContext())({
+      organizationId,
+    })
+
+    expect(list.communityRoles).toMatchObject([
+      {
+        discordRoleId: 'discord-role-perk-holders',
+        id: 'role-perk-holders',
+      },
+    ])
+  })
+
+  test('maps an existing Discord role with the same normalized name instead of creating a duplicate', async () => {
+    const organizationId = crypto.randomUUID()
+
+    await insertOrganization({
+      id: organizationId,
+      name: 'Acme',
+      slug: 'acme',
+    })
+    await insertCommunityDiscordConnection({
+      guildId: '123456789012345678',
+      organizationId,
+    })
+    await insertTeam({
+      id: 'team-perk-holders',
+      name: 'PERK Holders',
+      organizationId,
+    })
+    await insertCommunityRole({
+      id: 'role-perk-holders',
+      name: 'PERK Holders',
+      organizationId,
+      slug: 'perk-holders',
+      teamId: 'team-perk-holders',
+    })
+    inspectDiscordGuildRolesImplementation = async () =>
+      createInspectionResult({
+        roles: [
+          {
+            assignable: true,
+            checks: [],
+            id: 'discord-role-perk-holders',
+            isDefault: false,
+            managed: false,
+            name: 'perk holders',
+            position: 5,
+          },
+        ],
+      })
+
+    const result = await adminCommunityRoleRouter.createDiscordRoleMapping.callable(createAdminCallContext())({
+      communityRoleId: 'role-perk-holders',
+    })
+
+    expect(ensureDiscordRoleCallCount).toBe(0)
+    expect(inspectDiscordGuildRolesCallCount).toBe(2)
+    expect(result).toEqual({
+      created: false,
+      discordRoleId: 'discord-role-perk-holders',
+      discordRoleName: 'perk holders',
+      mapping: {
+        checks: [],
+        status: 'ready',
+      },
     })
   })
 

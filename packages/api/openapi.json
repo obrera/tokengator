@@ -708,6 +708,68 @@
         }
       }
     },
+    "/adminCommunityRole/createDiscordRoleMapping": {
+      "post": {
+        "operationId": "adminCommunityRole.createDiscordRoleMapping",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "communityRoleId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["communityRoleId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "created": {
+                      "type": "boolean"
+                    },
+                    "discordRoleId": {
+                      "type": "string"
+                    },
+                    "discordRoleName": {
+                      "type": "string"
+                    },
+                    "mapping": {
+                      "type": "object",
+                      "properties": {
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "status": {
+                          "enum": ["needs_attention", "not_mapped", "ready"],
+                          "type": "string"
+                        }
+                      },
+                      "required": ["checks", "status"]
+                    }
+                  },
+                  "required": ["created", "discordRoleId", "discordRoleName", "mapping"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/adminCommunityRole/delete": {
       "post": {
         "operationId": "adminCommunityRole.delete",

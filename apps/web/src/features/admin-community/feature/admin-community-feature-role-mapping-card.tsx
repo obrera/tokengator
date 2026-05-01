@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { AdminCommunityRoleDiscordGuildRolesResult, AdminCommunityRoleEntity } from '@tokengator/sdk'
 import type { UiStatusVariants } from '@tokengator/ui/components/ui-status'
 
+import { useAdminCommunityDiscordRoleCreateAndMap } from '../data-access/use-admin-community-discord-role-create-and-map'
 import { useAdminCommunityDiscordRoleMappingSet } from '../data-access/use-admin-community-discord-role-mapping-set'
 import { AdminCommunityRoleUiCard } from '../ui/admin-community-role-ui-card'
 import { AdminCommunityRoleUiMappingCard } from '../ui/admin-community-role-ui-mapping-card'
@@ -104,6 +105,7 @@ export function AdminCommunityFeatureRoleMappingCard(props: AdminCommunityFeatur
     organizationId,
   } = props
   const [discordRoleDraftOverride, setDiscordRoleDraftOverride] = useState<string | null>(null)
+  const createDiscordRoleMapping = useAdminCommunityDiscordRoleCreateAndMap(organizationId)
   const setDiscordRoleMapping = useAdminCommunityDiscordRoleMappingSet(organizationId)
   const discordConnection = discordGuildRoles?.connection ?? null
   const discordGuildRolesById = new Map(
@@ -143,6 +145,12 @@ export function AdminCommunityFeatureRoleMappingCard(props: AdminCommunityFeatur
         })
   const autoSelectedDiscordRoleId =
     autoSelectedDiscordRoleMatches.length === 1 ? autoSelectedDiscordRoleMatches[0].id : ''
+  const discordRoleNameExists = (discordGuildRoles?.guildRoles ?? []).some(
+    (guildRole) =>
+      !guildRole.isDefault &&
+      !guildRole.managed &&
+      normalizeDiscordRoleName(guildRole.name) === normalizeDiscordRoleName(communityRole.name),
+  )
   const currentDiscordRoleDraft = hasDiscordRoleDraftOverride
     ? (discordRoleDraftOverride ?? '')
     : (communityRole.discordRoleId ?? autoSelectedDiscordRoleId)
@@ -150,6 +158,12 @@ export function AdminCommunityFeatureRoleMappingCard(props: AdminCommunityFeatur
   const isDiscordRoleMappingDirty = currentDiscordRoleDraft !== (communityRole.discordRoleId ?? '')
   const isDiscordRoleMappingPending =
     setDiscordRoleMapping.isPending && setDiscordRoleMapping.variables?.communityRoleId === communityRole.id
+  const isDiscordRoleCreateMappingPending =
+    createDiscordRoleMapping.isPending && createDiscordRoleMapping.variables?.communityRoleId === communityRole.id
+  const createDiscordRoleErrorMessage =
+    createDiscordRoleMapping.isError && createDiscordRoleMapping.variables?.communityRoleId === communityRole.id
+      ? createDiscordRoleMapping.error.message
+      : null
   const mappedDiscordRole = communityRole.discordRoleId
     ? (discordGuildRolesById.get(communityRole.discordRoleId) ?? null)
     : null
@@ -184,6 +198,15 @@ export function AdminCommunityFeatureRoleMappingCard(props: AdminCommunityFeatur
     } catch {}
   }
 
+  async function handleCreateDiscordRoleMapping() {
+    try {
+      await createDiscordRoleMapping.mutateAsync({
+        communityRoleId: communityRole.id,
+      })
+      setDiscordRoleDraftOverride(null)
+    } catch {}
+  }
+
   return (
     <AdminCommunityRoleUiCard
       conditions={communityRole.conditions}
@@ -208,10 +231,14 @@ export function AdminCommunityFeatureRoleMappingCard(props: AdminCommunityFeatur
           canClear={Boolean(communityRole.discordRoleId || currentDiscordRoleDraft)}
           canConfigureDiscordMappings={canConfigureDiscordMappings}
           canSave={Boolean(currentDiscordRoleDraft) && isDiscordRoleMappingDirty && canConfigureDiscordMappings}
+          createRoleOptionLabel={
+            canConfigureDiscordMappings && !discordRoleNameExists ? `Create role "${communityRole.name}"` : undefined
+          }
           currentDiscordRoleDraft={currentDiscordRoleDraft}
           diagnostics={mappingDiagnostics}
+          errorMessage={createDiscordRoleErrorMessage}
           id={`community-role-discord-role-${communityRole.id}`}
-          isPending={isDiscordRoleMappingPending}
+          isPending={isDiscordRoleMappingPending || isDiscordRoleCreateMappingPending}
           mappingConflictMessage={
             currentDiscordRoleDraft && selectedDraftRoleOwner && selectedDraftRoleOwner.id !== communityRole.id
               ? `This Discord role is already mapped to ${selectedDraftRoleOwner.name}.`
@@ -226,6 +253,7 @@ export function AdminCommunityFeatureRoleMappingCard(props: AdminCommunityFeatur
               : undefined
           }
           onClear={() => void handleClearRoleMapping()}
+          onCreateRole={() => void handleCreateDiscordRoleMapping()}
           onDraftChange={setDiscordRoleDraftOverride}
           onSave={() => void handleSaveRoleMapping()}
           options={(discordGuildRoles?.guildRoles ?? [])
@@ -246,6 +274,9 @@ export function AdminCommunityFeatureRoleMappingCard(props: AdminCommunityFeatur
                 }`,
               }
             })}
+          pendingMessage={
+            isDiscordRoleCreateMappingPending ? `Creating and mapping "${communityRole.name}"...` : undefined
+          }
           showDisabledRoleNote={!communityRole.enabled}
           statusMessage={
             currentDiscordMappingState.status === 'ready'

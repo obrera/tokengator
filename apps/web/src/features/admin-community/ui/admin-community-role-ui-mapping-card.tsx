@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react'
 import { Button } from '@tokengator/ui/components/button'
 import { Label } from '@tokengator/ui/components/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tokengator/ui/components/select'
@@ -12,8 +13,10 @@ interface AdminCommunityRoleUiMappingCardProps {
   canClear: boolean
   canConfigureDiscordMappings: boolean
   canSave: boolean
+  createRoleOptionLabel?: string
   currentDiscordRoleDraft: string
   diagnostics: string[]
+  errorMessage?: string | null
   id: string
   isPending: boolean
   mappingConflictMessage?: string
@@ -22,13 +25,16 @@ interface AdminCommunityRoleUiMappingCardProps {
     label: string
   }
   onClear: () => void
+  onCreateRole?: () => void
   onDraftChange: (value: string) => void
   onSave: () => void
   options: AdminCommunityRoleUiMappingOption[]
+  pendingMessage?: string | null
   showDisabledRoleNote: boolean
   statusMessage: string
 }
 
+const createDiscordRoleValue = '__create-discord-role__'
 const notMappedDiscordRoleValue = '__not-mapped__'
 
 export function AdminCommunityRoleUiMappingCard(props: AdminCommunityRoleUiMappingCardProps) {
@@ -36,16 +42,20 @@ export function AdminCommunityRoleUiMappingCard(props: AdminCommunityRoleUiMappi
     canClear,
     canConfigureDiscordMappings,
     canSave,
+    createRoleOptionLabel,
     currentDiscordRoleDraft,
     diagnostics,
+    errorMessage,
     id,
     isPending,
     mappingConflictMessage,
     missingMappedRoleOption,
     onClear,
+    onCreateRole,
     onDraftChange,
     onSave,
     options,
+    pendingMessage,
     showDisabledRoleNote,
     statusMessage,
   } = props
@@ -54,6 +64,14 @@ export function AdminCommunityRoleUiMappingCard(props: AdminCommunityRoleUiMappi
       label: 'Not mapped',
       value: notMappedDiscordRoleValue,
     },
+    ...(createRoleOptionLabel
+      ? [
+          {
+            label: createRoleOptionLabel,
+            value: createDiscordRoleValue,
+          },
+        ]
+      : []),
     ...(missingMappedRoleOption
       ? [
           {
@@ -94,6 +112,12 @@ export function AdminCommunityRoleUiMappingCard(props: AdminCommunityRoleUiMappi
                 return
               }
 
+              if (value === createDiscordRoleValue) {
+                onCreateRole?.()
+
+                return
+              }
+
               onDraftChange(value === notMappedDiscordRoleValue ? '' : value)
             }}
             value={currentDiscordRoleDraft || notMappedDiscordRoleValue}
@@ -103,6 +127,11 @@ export function AdminCommunityRoleUiMappingCard(props: AdminCommunityRoleUiMappi
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={notMappedDiscordRoleValue}>Not mapped</SelectItem>
+              {createRoleOptionLabel ? (
+                <SelectItem disabled={!onCreateRole} value={createDiscordRoleValue}>
+                  {createRoleOptionLabel}
+                </SelectItem>
+              ) : null}
               {missingMappedRoleOption ? (
                 <SelectItem value={missingMappedRoleOption.id}>{missingMappedRoleOption.label}</SelectItem>
               ) : null}
@@ -128,6 +157,13 @@ export function AdminCommunityRoleUiMappingCard(props: AdminCommunityRoleUiMappi
         </div>
       ) : null}
       {mappingConflictMessage ? <div className="text-destructive text-xs">{mappingConflictMessage}</div> : null}
+      {pendingMessage ? (
+        <div className="text-muted-foreground flex items-center gap-2 text-xs">
+          <Loader2 className="size-3.5 animate-spin" />
+          {pendingMessage}
+        </div>
+      ) : null}
+      {errorMessage ? <div className="text-destructive text-xs">{errorMessage}</div> : null}
       {diagnostics.length ? (
         <div className="grid gap-1">
           <div className="font-medium">Mapping Diagnostics</div>
