@@ -21,6 +21,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "catalog:",
     "next-themes": "catalog:",
+    "ogl": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "shadcn": "^3.6.2",

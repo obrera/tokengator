@@ -13,10 +13,7 @@ interface ShellUiHeaderProps {
 
 export function ShellUiHeader({ actions, homeLink }: ShellUiHeaderProps) {
   return (
-    <header
-      className="border-b border-white/6 bg-black/30 shadow-[0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl supports-[backdrop-filter]:bg-black/10"
-      style={shellUiHeaderStyle}
-    >
+    <header className="bg-background border-border border-b" style={shellUiHeaderStyle}>
       <div className="flex min-h-16 w-full flex-wrap items-center justify-between gap-3 px-4 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-4 md:gap-6">
           <Link

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Button } from '@tokengator/ui/components/button'
+import { UiBackground } from '@tokengator/ui/components/ui-background'
 
 import { HomeUiAccessFlow } from '../ui/home-ui-access-flow'
 import { HomeUiCapabilityGrid } from '../ui/home-ui-capability-grid'
@@ -48,10 +49,9 @@ export function HomeFeatureIndex() {
       className="relative flex overflow-hidden px-4 pt-26 pb-10 sm:px-6 sm:pt-30 sm:pb-14"
       style={homeFeatureShellOffsetStyle}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_52%_at_50%_-8%,rgba(119,178,85,0.42),rgba(119,178,85,0.16)_32%,transparent_60%),radial-gradient(88%_48%_at_82%_100%,rgba(62,114,29,0.18),transparent_54%)]"
-      />
+      <div aria-hidden className="pointer-events-none absolute inset-0 opacity-55">
+        <UiBackground />
+      </div>
       <section className="relative mx-auto flex w-full max-w-6xl items-center">
         <div className="grid w-full gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,28rem)] lg:items-end">
           <div className="space-y-7">
