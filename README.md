@@ -54,8 +54,10 @@ bun run db:local
 3. Apply the schema to your database:
 
 ```bash
-bun run db:push
+bun run db:migrate
 ```
+
+Use `bun run db:migrate` for local setup, Docker startup, and shared environments. `bun run db:push` is only for explicit one-off schema syncing against disposable databases.
 
 4. Start the API in one terminal:
 
@@ -129,7 +131,7 @@ The Docker override file pins the Compose stack to a single public origin:
 - `WEB_URL=http://localhost:3000`
 - `DATABASE_URL=http://libsql:8080`
 
-On startup the app container runs `db:push` and then starts the API/frontend server.
+On startup the app container runs `db:migrate` and then starts the API/frontend server.
 
 ### Split-Origin Override
 
@@ -197,10 +199,10 @@ tokengator/
 - `bun run build`: Build all applications
 - `bun run check-types`: Check TypeScript types across all apps
 - `bun run ci`: Run the full CI task set locally
-- `bun run db:generate`: Generate database client/types
+- `bun run db:generate`: Generate Drizzle migration files from schema changes
 - `bun run db:local`: Start the local SQLite database
 - `bun run db:migrate`: Run database migrations
-- `bun run db:push`: Push schema changes to database
+- `bun run db:push`: Push schema changes directly to a database; do not use for normal startup or shared environments
 - `bun run db:reset`: Remove the local SQLite database files
 - `bun run db:seed`: Seed local development data through the local API
 - `bun run db:studio`: Open database studio UI

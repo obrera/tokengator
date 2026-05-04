@@ -101,7 +101,7 @@ function decodeOutput(buffer: Uint8Array | undefined) {
 
 function syncDatabase(databaseUrl: string) {
   const result = Bun.spawnSync({
-    cmd: ['bun', 'run', 'db:push', '--force'],
+    cmd: ['bun', 'run', 'db:migrate'],
     cwd: DB_PACKAGE_DIR,
     env: {
       ...process.env,
@@ -113,7 +113,9 @@ function syncDatabase(databaseUrl: string) {
   })
 
   if (result.exitCode !== 0) {
-    throw new Error(`Failed to sync the test database.\n${decodeOutput(result.stdout)}\n${decodeOutput(result.stderr)}`)
+    throw new Error(
+      `Failed to migrate the test database.\n${decodeOutput(result.stdout)}\n${decodeOutput(result.stderr)}`,
+    )
   }
 }
 

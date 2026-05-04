@@ -29,6 +29,15 @@ Default to using Bun instead of Node.js.
 - Hono and oRPC power the backend API surface
 - Shared UI components live in `packages/ui`
 
+## Database migrations
+
+- Drizzle schema lives in `packages/db/src/schema`.
+- When adding or changing tables, columns, indexes, or constraints, generate a migration with `bun run --cwd packages/db db:generate -- --name=<descriptive_name>`.
+- Always inspect the generated SQL in `packages/db/src/migrations` before relying on it.
+- Check in both generated SQL files and generated `packages/db/src/migrations/meta` files.
+- Use `bun run db:migrate` for local setup, Docker startup, tests, and shared environments.
+- Do not use `bun run db:push` for normal schema changes or startup paths.
+
 ## Shadcn UI
 
 - Add shadcn components with `bun x shadcn@latest add -c packages/ui <components>`.

@@ -373,7 +373,7 @@ async function signInWithSiws(authClient: SiwsSessionClients['authClient'], fixt
 
 function syncDatabase(databaseUrl: string) {
   const result = Bun.spawnSync({
-    cmd: ['bun', 'run', 'db:push', '--force'],
+    cmd: ['bun', 'run', 'db:migrate'],
     cwd: DB_PACKAGE_DIR,
     env: {
       ...process.env,
@@ -388,7 +388,7 @@ function syncDatabase(databaseUrl: string) {
     const stderr = decodeOutput(result.stderr)
     const stdout = decodeOutput(result.stdout)
 
-    throw new Error(`Failed to sync the test database.\n${stdout}\n${stderr}`)
+    throw new Error(`Failed to migrate the test database.\n${stdout}\n${stderr}`)
   }
 }
 

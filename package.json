@@ -63,7 +63,7 @@
     "lint": "oxlint && oxfmt --check",
     "lint:fix": "oxlint --fix && oxfmt --write",
     "pack:packages": "bun run --filter '*' pack:npm",
-    "prestart:api": "bun run build && bun db:push",
+    "prestart:api": "bun run build && bun db:migrate",
     "ruler:apply": "bun x ruler apply --local-only",
     "setup": "bun run ./scripts/setup.ts",
     "start:api": "bun --bun run --cwd apps/api start",

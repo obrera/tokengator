@@ -57,7 +57,7 @@ await Bun.write(
       packageManager: rootPackage.packageManager,
       private: true,
       scripts: {
-        prestart: 'bun run --cwd packages/db db:push',
+        prestart: 'bun run --cwd packages/db db:migrate',
         start: 'bun run ./apps/api/dist/index.runtime.mjs',
       },
     },

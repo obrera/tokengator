@@ -1,8 +1,8 @@
 import { createClient } from '@libsql/client'
-import { beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
-import { mkdirSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -12,7 +12,7 @@ type CommunityRoleSchema = typeof import('../src/schema/community-role')
 type DatabaseClient = ReturnType<typeof drizzle>
 
 const DB_PACKAGE_DIR = resolve(import.meta.dir, '..')
-const TEST_DATABASE_DIR = resolve(tmpdir(), 'tokengator-db-tests')
+const TEST_DATABASE_DIR = mkdtempSync(resolve(tmpdir(), 'tokengator-db-tests-'))
 const TEST_DATABASE_URL = pathToFileURL(resolve(TEST_DATABASE_DIR, 'community-discord-connection.sqlite')).toString()
 
 let authSchema: AuthSchema
@@ -25,7 +25,7 @@ function decodeOutput(buffer: Uint8Array | undefined) {
 
 function syncDatabase(databaseUrl: string) {
   const result = Bun.spawnSync({
-    cmd: ['bun', 'run', 'db:push', '--force'],
+    cmd: ['bun', 'run', 'db:migrate'],
     cwd: DB_PACKAGE_DIR,
     env: {
       ...process.env,
@@ -37,7 +37,9 @@ function syncDatabase(databaseUrl: string) {
   })
 
   if (result.exitCode !== 0) {
-    throw new Error(`Failed to sync the test database.\n${decodeOutput(result.stdout)}\n${decodeOutput(result.stderr)}`)
+    throw new Error(
+      `Failed to migrate the test database.\n${decodeOutput(result.stdout)}\n${decodeOutput(result.stderr)}`,
+    )
   }
 }
 
@@ -53,10 +55,6 @@ async function insertOrganization(input: { id: string; name: string; slug: strin
 }
 
 beforeAll(async () => {
-  mkdirSync(TEST_DATABASE_DIR, {
-    recursive: true,
-  })
-
   process.env.API_URL = 'http://127.0.0.1:3000'
   process.env.BETTER_AUTH_SECRET = '12345678901234567890123456789012'
   process.env.BETTER_AUTH_SOLANA_SIGN_IN_ENABLED = 'true'
@@ -82,6 +80,13 @@ beforeAll(async () => {
       url: TEST_DATABASE_URL,
     }),
     schema: await import('../src/schema'),
+  })
+})
+
+afterAll(() => {
+  rmSync(TEST_DATABASE_DIR, {
+    force: true,
+    recursive: true,
   })
 })
 
